@@ -1,8 +1,9 @@
-name: Daily Auto Commit
+name: daily auto commit larp larpppp
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    # every 3 hours or idk
+    - cron: '0 */3 * * *'
   workflow_dispatch:
 
 jobs:
@@ -12,14 +13,33 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Update log file
+      - name: Random Delay & Commits
         run: |
-          echo "Last updated: $(date)" > log.txt
+          # 50% chance to skip this run entirely to vary daily execution times
+          IF_RUN=$((RANDOM % 2))
+          if [ "$IF_RUN" -eq 0 ]; then
+            echo "Skipping this run to keep times random."
+            exit 0
+          fi
 
-      - name: Commit and push changes
-        run: |
+          # Wait a random time up to 20 minutes before committing
+          DELAY=$((RANDOM % 1200))
+          echo "Waiting $DELAY seconds..."
+          sleep $DELAY
+
+          # Pick a random number of commits between 1 and 4
+          NUM_COMMITS=$(( (RANDOM % 4) + 1 ))
+          echo "Making $NUM_COMMITS commit(s)..."
+
           git config --local user.email "nobody@example.com"
           git config --local user.name "GitHub Action Bot"
-          git add log.txt
-          git diff --staged --quiet || git commit -m "Auto update: $(date)"
+
+          for i in $(seq 1 $NUM_COMMITS); do
+            echo "Update on $(date)" >> log.txt
+            git add log.txt
+            git commit -m "Auto update: $(date)"
+            # Pause briefly between multi-commit pushes
+            sleep $((RANDOM % 10 + 1))
+          done
+
           git push
