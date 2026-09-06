@@ -1,1 +1,26 @@
+name: Daily Auto Commit
 
+on:
+  schedule:
+    # Runs at 00:00 UTC every day
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Allows manual trigger from the Actions tab
+
+jobs:
+  auto-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Up  date commit log
+        run: |
+          echo "Last updated: $(date)" > log.txt
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "nobody@example.com"
+          git config --local user.name "GitHub Action"
+          git add log.txt
+          git diff --quiet && git diff --staged --quiet || git commit -m "Auto update: $(date)"
+          git push
