@@ -2,7 +2,7 @@ name: Daily Auto Commit
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 */3 * * *'
   workflow_dispatch:
 
 jobs:
@@ -11,15 +11,35 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Update log file
+      - name: Random Delay and Commits
+        shell: bash
         run: |
-          echo "Last updated: $(date)" > log.txt
+          # 50% chance to skip this run
+          if [ $((RANDOM % 2)) -eq 0 ]; then
+            echo "Skipping this run at random."
+            exit 0
+          fi
 
-      - name: Commit and push changes
-        run: |
+          # Wait a random delay (up to 300 seconds for quick testing)
+          DELAY=$((RANDOM % 300))
+          echo "Waiting $DELAY seconds..."
+          sleep $DELAY
+
           git config --local user.email "nobody@example.com"
           git config --local user.name "GitHub Action Bot"
-          git add log.txt
-          git diff --staged --quiet || git commit -m "Auto update: $(date)"
+
+          # Pick 1 to 4 commits
+          NUM_COMMITS=$(( (RANDOM % 4) + 1 ))
+          echo "Making $NUM_COMMITS commit(s)..."
+
+          for ((i=1; i<=NUM_COMMITS; i++)); do
+            echo "Update on $(date)" >> log.txt
+            git add log.txt
+            git commit -m "Auto update: $(date)" || true
+            sleep 2
+          done
+
           git push
