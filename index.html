@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ZentEncrypted — E2EE Chat</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/3.4.4/tailwind.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          brand: { 50:'#eef2ff',100:'#e0e7ff',500:'#6366f1',600:'#4f46e5',700:'#4338ca',900:'#312e81' },
+        }
+      }
+    }
+  }
+</script>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="font-sans min-h-screen" style="background:var(--bg); color:var(--text);">
+
+<!-- ============ AUTH SCREEN ============ -->
+<div id="auth-screen" class="screen min-h-screen flex flex-col items-center justify-center gap-6 px-4">
+  <div class="w-full max-w-sm rounded-2xl border p-8 shadow-xl" style="background:var(--bg-card); border-color:var(--border);">
+    <div class="flex items-center gap-3 mb-1">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-lg leading-tight">ZentEncrypted</h1>
+        <p class="text-xs" style="color:var(--text-dim);">Self-hosted end-to-end encrypted chat</p>
+      </div>
+    </div>
+
+    <div id="auth-error" class="notice error hidden mt-4"></div>
+
+    <form id="login-form" class="flex flex-col gap-3 mt-5">
+      <input type="text" id="login-username" placeholder="Username" autocomplete="username" required class="field" />
+      <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" required class="field" />
+      <button type="submit" class="btn-primary"><i class="fa-solid fa-right-to-bracket mr-2"></i>Log In</button>
+      <p class="text-xs text-center" style="color:var(--text-dim);">No account? <a href="#" id="show-register" class="text-brand-400 hover:underline">Register</a></p>
+    </form>
+
+    <form id="register-form" class="flex flex-col gap-3 mt-5 hidden">
+      <input type="text" id="register-username" placeholder="Choose a username" required class="field" />
+      <input type="password" id="register-password" placeholder="Choose a password (min 8 chars)" required class="field" />
+      <button type="submit" class="btn-primary"><i class="fa-solid fa-user-plus mr-2"></i>Create Account</button>
+      <p class="text-xs text-center" style="color:var(--text-dim);">Have an account? <a href="#" id="show-login" class="text-brand-400 hover:underline">Log In</a></p>
+    </form>
+
+    <div class="flex items-center gap-3 my-5">
+      <div class="flex-1 h-px" style="background:var(--border);"></div>
+      <span class="text-xs" style="color:var(--text-dim);">or</span>
+      <div class="flex-1 h-px" style="background:var(--border);"></div>
+    </div>
+
+    <button id="guest-btn" class="btn-secondary w-full"><i class="fa-solid fa-user-secret mr-2"></i>Continue as Guest</button>
+  </div>
+
+  <span class="text-[11px] px-3 py-1 rounded-full border font-mono" style="color:var(--text-dim); border-color:var(--border);">
+    <i class="fa-solid fa-shield-halved mr-1 text-emerald-400"></i>Zero-knowledge server — ciphertext only
+  </span>
+
+  <footer class="text-xs" style="color:var(--text-dim);">
+    <a href="https://github.com/" target="_blank" rel="noopener" class="hover:underline">GitHub Issues</a> ·
+    <a href="README.md" target="_blank" rel="noopener" class="hover:underline">Documentation</a> ·
+    <a href="#" target="_blank" rel="noopener" class="hover:underline">Buy Me a Coffee</a> ·
+    <a href="#" target="_blank" rel="noopener" class="hover:underline">Discord</a>
+  </footer>
+</div>
+
+<!-- ============ CHAT SCREEN ============ -->
+<div id="chat-screen" class="screen hidden h-screen grid" style="grid-template-columns: 260px 1fr;">
+
+  <aside class="flex flex-col p-4 gap-4 border-r" style="background:var(--bg-alt); border-color:var(--border);">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white text-sm">
+          <i class="fa-solid fa-lock"></i>
+        </div>
+        <span class="font-bold text-sm">ZentEncrypted</span>
+      </div>
+      <button id="settings-btn" title="Settings" class="w-8 h-8 rounded-lg flex items-center justify-center hover:opacity-80" style="background:var(--bg-elevated);">
+        <i class="fa-solid fa-gear text-sm"></i>
+      </button>
+    </div>
+
+    <div class="flex items-center gap-2.5 rounded-xl border p-2.5" style="background:var(--bg-elevated); border-color:var(--border);">
+      <div class="w-8 h-8 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center border border-brand-500/30 text-sm">
+        <i class="fa-solid fa-user"></i>
+      </div>
+      <div class="min-w-0">
+        <div id="me-username" class="font-semibold text-sm truncate"></div>
+        <div id="me-role" class="text-[11px]" style="color:var(--text-dim);"></div>
+      </div>
+      <button id="logout-btn" title="Log out" class="ml-auto w-7 h-7 rounded-lg flex items-center justify-center hover:opacity-80" style="color:var(--text-dim);">
+        <i class="fa-solid fa-right-from-bracket text-xs"></i>
+      </button>
+    </div>
+
+    <div class="text-[11px] uppercase tracking-wide font-semibold" style="color:var(--text-dim);">Rooms</div>
+    <ul id="room-list" class="flex-1 overflow-y-auto space-y-0.5 -mx-1"></ul>
+
+    <form id="create-room-form" class="flex gap-2">
+      <input type="text" id="new-room-name" placeholder="New room name…" maxlength="40" class="field flex-1 text-sm py-2" />
+      <button type="submit" class="w-9 rounded-lg bg-brand-600 hover:bg-brand-500 text-white flex items-center justify-center">
+        <i class="fa-solid fa-plus text-xs"></i>
+      </button>
+    </form>
+
+    <footer class="text-[11px]" style="color:var(--text-dim);">
+      <a href="https://github.com/" target="_blank" rel="noopener" class="hover:underline">Issues</a> ·
+      <a href="README.md" target="_blank" rel="noopener" class="hover:underline">Docs</a> ·
+      <a href="#" target="_blank" rel="noopener" class="hover:underline">Discord</a>
+    </footer>
+  </aside>
+
+  <main class="flex flex-col min-w-0">
+    <header class="flex items-center justify-between px-5 py-4 border-b" style="border-color:var(--border);">
+      <span id="current-room-label" class="font-semibold text-sm"># global</span>
+      <span id="typing-indicator" class="text-xs hidden" style="color:var(--text-dim);"></span>
+      <span class="text-[10px] px-2.5 py-1 rounded-full border font-mono" style="color:var(--text-dim); border-color:var(--border);">
+        <i class="fa-solid fa-shield-halved mr-1 text-emerald-400"></i>E2EE
+      </span>
+    </header>
+
+    <div id="notice-bar" class="notice hidden mx-5 mt-3"></div>
+
+    <div id="messages-container" class="flex-1 relative overflow-hidden"></div>
+
+    <form id="message-form" class="flex gap-2.5 px-5 py-4 border-t" style="border-color:var(--border);">
+      <input type="text" id="message-input" placeholder="Type an encrypted message…" autocomplete="off" required class="field flex-1" />
+      <button type="submit" class="btn-primary px-5"><i class="fa-solid fa-paper-plane"></i></button>
+    </form>
+  </main>
+
+  <div id="settings-panel" class="settings-panel hidden">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-bold text-base"><i class="fa-solid fa-gear mr-2"></i>Settings</h2>
+      <button onclick="document.getElementById('settings-panel').classList.add('hidden')" class="w-7 h-7 rounded-lg flex items-center justify-center" style="color:var(--text-dim);">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="setting-row">
+      <label for="sound-toggle">Sound notifications</label>
+      <input type="checkbox" id="sound-toggle" />
+    </div>
+
+    <div class="setting-row">
+      <label for="theme-select">Theme</label>
+      <select id="theme-select" class="field text-sm py-1.5 px-2 w-32">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+        <option value="oled">Midnight OLED</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <button id="clear-keys-btn" class="btn-danger"><i class="fa-solid fa-key mr-2"></i>Clear local keys &amp; session data</button>
+    </div>
+
+    <p class="text-xs mt-6 leading-relaxed" style="color:var(--text-dim);">
+      Room passphrases and decryption keys live only in this browser tab's memory/session storage.
+      They are never sent to or stored on the server.
+    </p>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/crypto.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
