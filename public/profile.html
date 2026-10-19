@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Profile · ZENT</title>
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#161513" id="meta-theme" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="preload" href="/fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/profile.css?v=2.5" />
+</head>
+<body>
+<div class="pp-backdrop" id="pp-backdrop" aria-hidden="true"></div>
+
+<main class="pp-card is-loading" id="pp-card">
+  <div class="pp-banner" id="pp-banner"></div>
+  <div class="pp-avatar" id="pp-avatar" aria-hidden="true"></div>
+  <h1 class="pp-name" id="pp-name">&nbsp;</h1>
+  <p class="pp-handle" id="pp-handle"></p>
+  <p class="pp-status" id="pp-status" hidden></p>
+  <p class="pp-bio" id="pp-bio"></p>
+  <nav class="pp-links" id="pp-links" aria-label="Links"></nav>
+  <p class="pp-since" id="pp-since"></p>
+</main>
+
+<section class="pp-missing" id="pp-missing" hidden>
+  <h1>Nothing here</h1>
+  <p id="pp-missing-text">This profile doesn't exist, or it's private.</p>
+  <a class="pp-btn" href="/">Go to ZENT</a>
+</section>
+
+<a class="pp-foot" href="/" aria-label="ZENT home">ZENT<span>//</span></a>
+<script src="/js/profile-page.js?v=2.5"></script>
+</body>
+</html>

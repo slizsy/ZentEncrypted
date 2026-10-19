@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="graphite">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Admin · ZENT</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="preload" href="/fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/base.css?v=2.5" />
+<link rel="stylesheet" href="/css/components.css?v=2.5" />
+<link rel="stylesheet" href="/css/admin.css?v=2.5" />
+</head>
+<body class="adm">
+<header class="adm-head">
+  <a class="adm-mark" href="/">ZENT<span class="wm-slash">//</span></a>
+  <span class="adm-title">admin</span>
+  <span id="adm-live" class="adm-live is-hidden"><span class="pulse"></span><span id="adm-updated">live</span></span>
+  <button id="adm-out" class="btn btn-sm-plain is-hidden" type="button">Sign out</button>
+</header>
+
+<main class="adm-main">
+  <section id="adm-off" class="adm-login is-hidden">
+    <h1>Admin page is off</h1>
+    <p class="hint">Add <code>ADMIN_PASSWORD=</code> with 12 or more characters to <code>.env</code>, then restart the server.</p>
+  </section>
+
+  <form id="adm-login" class="adm-login form is-hidden" autocomplete="on">
+    <h1>Admin</h1>
+    <p class="hint">Counts only. No messages, names or addresses are shown here.</p>
+    <input type="text" name="username" value="admin" autocomplete="username" hidden />
+    <label class="field"><span>Password</span><input id="adm-pw" type="password" autocomplete="current-password" required /></label>
+    <div id="adm-err" class="alert is-hidden" role="alert"></div>
+    <button class="btn btn-solid btn-block" type="submit"><span class="btn-text">Open dashboard</span><span class="btn-spin" aria-hidden="true"></span></button>
+  </form>
+
+  <div id="adm-dash" class="adm-dash is-hidden">
+    <section class="adm-big">
+      <div class="stat"><b id="s-online">0</b><span>online now</span><small id="s-online-sub"></small></div>
+      <div class="stat"><b id="s-msgs">0</b><span>messages today</span><small id="s-msgs-sub"></small></div>
+      <div class="stat"><b id="s-accounts">0</b><span>accounts</span><small id="s-accounts-sub"></small></div>
+      <div class="stat"><b id="s-rooms">0</b><span>private rooms open</span><small id="s-rooms-sub"></small></div>
+    </section>
+
+    <section class="adm-panel adm-chart-panel">
+      <h2>Last 14 days</h2>
+      <div class="legend"><span class="k k-pub">#public</span><span class="k k-room">private rooms</span><span class="k k-dm">friends</span></div>
+      <div id="adm-chart" class="chart" role="img" aria-label="Messages per day"></div>
+      <div id="adm-chart-x" class="chart-x"></div>
+    </section>
+
+    <div class="adm-cols">
+      <section class="adm-panel">
+        <h2>Stored on the server</h2>
+        <dl class="kv" id="adm-stored"></dl>
+        <div class="meter"><i id="adm-disk-bar"></i></div>
+        <p class="hint" id="adm-files-line"></p>
+      </section>
+      <section class="adm-panel">
+        <h2>The machine</h2>
+        <dl class="kv" id="adm-server"></dl>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script src="/js/settings.js?v=2.5"></script>
+<script src="/js/themes.js?v=2.5"></script>
+<script src="/js/pow.js?v=2.5"></script>
+<script src="/js/api.js?v=2.5"></script>
+<script src="/js/admin.js?v=2.5"></script>
+</body>
+</html>

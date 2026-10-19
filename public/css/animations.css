@@ -1,0 +1,60 @@
+/* animations.css — all the motion lives here */
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes blink { 50% { opacity: 0.25; } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; visibility: hidden; } }
+@keyframes pane-in { from { opacity: 0; transform: translateY(6px); } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } }
+@keyframes sheet-in { from { transform: translateY(100%); } }
+@keyframes shake { 20% { transform: translateX(-5px); } 60% { transform: translateX(5px); } 100% { transform: none; } }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.55); opacity: 0.45; } }
+@keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
+@keyframes bar { from { transform: scaleY(0.35); } to { transform: scaleY(1); } }
+.signal i { transform-origin: bottom; }
+
+@keyframes ticker { to { transform: translateX(-50%); } }
+
+/* a new message lands like a stamp, then its highlight fades */
+@keyframes slap { from { opacity: 0; transform: translateY(8px) scale(0.985); } }
+@keyframes flash { from { background-color: color-mix(in srgb, var(--accent) 28%, transparent); } }
+
+@keyframes stamp-slam { 0% { transform: rotate(-3deg) scale(1.9); opacity: 0; } 60% { transform: rotate(-3deg) scale(0.92); opacity: 1; } 100% { transform: rotate(-3deg) scale(1); } }
+
+@keyframes toast-in { from { opacity: 0; transform: translateX(-24px); } }
+@keyframes toast-out { to { opacity: 0; transform: translateX(-24px); } }
+
+/* a burned room dissolves */
+@keyframes burn {
+  0% { filter: none; opacity: 1; }
+  35% { filter: contrast(1.8) sepia(1) hue-rotate(-20deg) saturate(4); opacity: 1; }
+  100% { filter: contrast(3) sepia(1) blur(7px) brightness(0.3); opacity: 0; transform: translateY(-14px) scale(1.02); }
+}
+
+/* hero equaliser on the sign-in page */
+.hero-bars i { transform-origin: bottom; animation: eq 1.6s ease-in-out infinite alternate; }
+.hero-bars i:nth-child(3n) { animation-duration: 1.1s; }
+.hero-bars i:nth-child(3n + 1) { animation-duration: 2.2s; animation-delay: -0.4s; }
+.hero-bars i:nth-child(4n) { background: var(--hot); }
+.hero-bars i:nth-child(5n) { animation-delay: -0.9s; }
+@keyframes eq { from { transform: scaleY(0.25); } to { transform: scaleY(1.7); } }
+
+.wordmark { animation: wm-in 0.8s var(--ease) both; }
+@keyframes wm-in { from { opacity: 0; transform: translateY(24px) skewY(2deg); letter-spacing: 0.04em; } }
+.ticket { animation: ticket-in 0.6s var(--ease) 0.12s both; }
+@keyframes ticket-in { from { opacity: 0; transform: translateY(26px) rotate(1.2deg); } }
+.hero-facts li { animation: pane-in 0.5s var(--ease) both; }
+.hero-facts li:nth-child(2) { animation-delay: 0.1s; } .hero-facts li:nth-child(3) { animation-delay: 0.2s; }
+
+/* screen change */
+.screen-leave { animation: fade-out 0.2s ease-in forwards; }
+.screen-enter { animation: pane-in 0.4s var(--ease); }
+
+/* motion off: the setting, or the OS asking for it */
+:root[data-motion='off'] *, :root[data-motion='off'] *::before, :root[data-motion='off'] *::after {
+  animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+}
