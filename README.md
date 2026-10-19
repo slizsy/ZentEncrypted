@@ -12,6 +12,11 @@ Live at **https://zentencrypted.org**
 - **Private rooms** - create a room with a join code. The code is stretched with PBKDF2 into an AES-256-GCM key in your browser. The server only ever sees a hash of the auth half, never the key. Rooms can burn on a timer or when the last person leaves, and you can share a link to invite people.
 - **Friend messages** - add friends with a friend code and DM them. Messages are stored on the server as ciphertext only, so they wait for you if you're offline. Includes unread badges, safety codes to verify a friend's key, and unfriending deletes the chat.
 - **Guests** - jump in without an account. Guests get an ephemeral key and no history once the session ends.
+- **Edit and delete** - fix or remove your own messages anywhere. In #public and friend chats the old version is wiped from the server's files within seconds, not just hidden. Press the Up arrow in an empty message box to edit your last message.
+- **Pictures and files** - attach, paste a screenshot, or drag a file onto the chat. In private rooms and friend chats every file is encrypted in your browser with its own key before upload. #public allows pictures only. Photos are redrawn before upload, which strips hidden data like GPS location.
+- **Emojis and GIFs** - a built-in emoji picker (no outside requests). Optional GIF search through Giphy, proxied by your server so Giphy never sees your users' IPs.
+- **Profiles** - display name, status, pronouns, bio, colors, picture, banner and up to 6 links. Click anyone's name to see theirs. Every account gets a page at `/u/name`, visible to the whole internet only if its owner switches that on.
+- **Admin stats** - a password-protected dashboard at `/admin`: people online, messages per day, sign-ups, storage, and the machine's health (CPU temperature, memory, disk). Counts only, never content or names.
 - **Human check** - a small proof-of-work challenge (15-20 bits, escalating per account after repeated failures) instead of a third-party captcha.
 - **Themes** - Graphite (default), Signal, Paper, Ember, Glacier, Phosphor, Riso, Oled, plus a custom theme you can share with a code.
 - **Older device support** - CSS fallbacks for browsers without `dvh`, `gap` on flexbox, and modern `clamp()`.
@@ -26,13 +31,15 @@ Live at **https://zentencrypted.org**
 | Private rooms | Key derived from the join code in the browser (PBKDF2 to AES-256-GCM). Server stores no key. |
 | Friend DMs | Each account has a long-term ECDH key pair. The private key is locked with a key derived from your password (PBKDF2), so any device can unlock it with your password. Messages are encrypted client-side and stored as ciphertext. |
 | Guests | Ephemeral ECDH key, never persisted. |
+| Files in private rooms / friend chats | Each file gets a random AES-256-GCM key. The key travels only inside the encrypted message, so the server stores ciphertext it can't open. |
+| Pictures in #public, profile pictures | Not encrypted (they're public). Checked by their actual bytes and served with safe headers, so a disguised file can't run as a web page. |
 | Password change | Your account key is re-locked with the new password. |
 
 ### Threat model (read this)
 
 This is browser-based E2EE, which has a well-known limit: **you are trusting the server to serve you honest JavaScript.** If the server operator ships malicious code, the encryption can be bypassed. Self-hosting is the answer to that. If you don't run the server yourself, you are trusting whoever does.
 
-The server can also see metadata: who is online, which rooms exist, message timing and size, and who is friends with whom. It cannot read private room or DM contents.
+The server can also see metadata: who is online, which rooms exist, message timing and size, file sizes, and who is friends with whom. If you send a GIF in a private chat, your server fetches it from Giphy, so it can tell which GIF was viewed (Giphy itself only sees your server). It cannot read private room or DM contents or files.
 
 ## Security hardening
 
@@ -43,6 +50,7 @@ The server can also see metadata: who is online, which rooms exist, message timi
 - Restrictive file permissions on data (700 for directories, 600 for files)
 - Zero known vulnerabilities from `npm audit` at release
 - Password change and "sign out everywhere"
+- Uploads: size limit, per-person daily limit, total storage cap, and files are deleted when their message, room or friendship goes
 
 ## Quick start
 
@@ -76,6 +84,15 @@ Set these in `.env`:
 | `PUBLIC_HISTORY_MAX` | `50000` | Max stored public messages |
 | `DM_HISTORY_DAYS` | `0` | Days to keep stored DMs (`0` means keep until deleted) |
 | `DM_HISTORY_MAX` | `200000` | Max stored encrypted DMs |
+| `UPLOADS` | `1` | Set to `0` to turn file sharing off |
+| `PUBLIC_UPLOADS` | `members` | Who can post pictures in #public: `off`, `members` or `all` |
+| `UPLOAD_MAX_MB` | `10` | Largest file allowed |
+| `UPLOAD_STORAGE_MB` | `2048` | Total space files may use |
+| `UPLOAD_USER_DAILY_MB` | `200` | Per person, per day |
+| `UPLOAD_KEEP_DAYS` | `30` | Files are deleted after this at the latest |
+| `GIPHY_API_KEY` | none | Turns on GIF search. Free key from [developers.giphy.com](https://developers.giphy.com) |
+| `GIF_RATING` | `pg-13` | `g`, `pg`, `pg-13` or `r` |
+| `ADMIN_PASSWORD` | none | Turns on the `/admin` page (12+ characters) |
 
 ## Deploying (Raspberry Pi + Cloudflare Tunnel)
 
@@ -100,6 +117,8 @@ Everything lives in `data/`:
 | `db.json` | Accounts, friend codes, locked keys |
 | `public-history.jsonl` | Saved public messages |
 | `dm.jsonl` | Stored encrypted friend messages (ciphertext only) |
+| `files/` + `files.json` | Uploaded files (ciphertext for private chats) and their list |
+| `stats.json` | Daily counts for the admin page (numbers only) |
 
 Back these up if you care about them, and **never commit them**.
 
@@ -135,14 +154,13 @@ public/          Frontend (HTML, CSS, client-side crypto)
 - **v2.2** - public history, theme updates, password change, older device fixes
 - **v2.3** - security hardening
 - **v2.4** - offline friend messages with stored encrypted DMs
+- **v2.5** - edit and delete, file sharing, emojis and GIFs, profiles, admin stats
 
 ## Roadmap
 
-- Edit and delete messages
 - Two-factor sign-in
-- Emojis, GIFs, and file sharing
 - Moderation tools (report and ban)
-- Admin stats page (counts only, password protected)
+- Files over the peer-to-peer Link tab
 - Optional Tor hidden service
 
 ## Contributing
