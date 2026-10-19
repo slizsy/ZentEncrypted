@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="graphite">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ZENT — sealed chat</title>
+<meta name="description" content="Chat with private encrypted rooms and a public room." />
+<meta name="theme-color" content="#161513" id="meta-theme" />
+<meta name="color-scheme" content="dark light" />
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" href="/icons/favicon-32.png" type="image/png" sizes="32x32" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+
+<link rel="preload" href="/fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/css/base.css?v=2.5" />
+<link rel="stylesheet" href="/css/layout.css?v=2.5" />
+<link rel="stylesheet" href="/css/components.css?v=2.5" />
+<link rel="stylesheet" href="/css/animations.css?v=2.5" />
+<link rel="stylesheet" href="/css/features.css?v=2.5" />
+</head>
+<body>
+
+<div class="grain" aria-hidden="true"></div>
+<div class="scan" aria-hidden="true"></div>
+
+<!-- first-load boot sequence -->
+<div id="boot" class="boot" aria-hidden="true"><pre id="boot-text"></pre></div>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<!-- shown while the proof-of-work human check runs -->
+<div id="pow-overlay" class="pow is-hidden" role="status" aria-live="polite">
+  <div class="pow-card">
+    <div class="pow-title">HUMAN CHECK</div>
+    <div class="pow-bar"><i></i></div>
+    <p>Lots of traffic from your network. Proving you're a person, this takes a second…</p>
+  </div>
+</div>
+
+<!-- =========================  SIGN IN  ========================= -->
+<main id="auth-screen" class="auth">
+  <section class="hero">
+    <h1 class="wordmark" aria-label="ZENT">
+      <span class="wm-main">ZENT</span><span class="wm-slash">//</span>
+    </h1>
+    <p class="hero-line">Private rooms. Nothing kept.</p>
+    <ul class="hero-facts">
+      <li><b>01</b> Rooms are encrypted on your device.</li>
+      <li><b>02</b> They delete themselves.</li>
+      <li><b>03</b> No email needed.</li>
+    </ul>
+    <div class="hero-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </section>
+
+  <section class="ticket">
+    <div class="ticket-tabs" role="tablist">
+      <button id="tab-login" class="ttab is-active" role="tab" type="button">Sign in</button>
+      <button id="tab-register" class="ttab" role="tab" type="button">New account</button>
+    </div>
+
+    <div id="auth-error" class="alert is-hidden" role="alert"></div>
+
+    <form id="login-form" class="form" autocomplete="on">
+      <label class="field"><span>Username</span>
+        <input id="login-username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required />
+      </label>
+      <label class="field"><span>Password</span>
+        <input id="login-password" type="password" autocomplete="current-password" required />
+      </label>
+      <label class="check"><input id="login-remember" type="checkbox" checked /><span>Stay signed in on this device</span></label>
+      <button type="submit" class="btn btn-solid btn-block"><span class="btn-text">Sign in</span><span class="btn-spin" aria-hidden="true"></span></button>
+    </form>
+
+    <form id="register-form" class="form is-hidden" autocomplete="on">
+      <label class="field"><span>Pick a username</span>
+        <input id="register-username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20" required />
+        <small>3–20 letters, numbers or _</small>
+      </label>
+      <label class="field"><span>Pick a password</span>
+        <input id="register-password" type="password" autocomplete="new-password" minlength="8" required />
+        <small>8 characters or more</small>
+      </label>
+      <label class="check"><input id="register-remember" type="checkbox" checked /><span>Stay signed in on this device</span></label>
+      <button type="submit" class="btn btn-solid btn-block"><span class="btn-text">Create account</span><span class="btn-spin" aria-hidden="true"></span></button>
+    </form>
+
+    <div class="or"><span>or</span></div>
+    <button id="guest-btn" class="btn btn-block" type="button">Enter as guest</button>
+    <p class="fine">Guest accounts last 24h.</p>
+    <a class="src-link" href="https://github.com/slizsy/ZentEncrypted" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg><span>Source</span></a>
+  </section>
+</main>
+
+<!-- =========================  APP  ========================= -->
+<div id="app" class="app is-hidden">
+  <div id="scrim" class="scrim"></div>
+
+  <!-- sidebar -->
+  <aside id="rail" class="rail" aria-label="Navigation">
+    <header class="rail-head">
+      <span class="wordmark-sm">ZENT<span class="wm-slash">//</span></span>
+      <span id="signal" class="signal" data-state="down" title="Connection" role="img" aria-label="Connection status"><i></i><i></i><i></i><i></i></span>
+      <button id="rail-close" class="icon-btn only-mobile" type="button" aria-label="Close menu">✕</button>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab is-active" data-tab="rooms" role="tab" type="button">Rooms<span id="rooms-badge" class="badge is-hidden"></span></button>
+      <button class="tab" data-tab="friends" role="tab" type="button">Friends<span id="friends-badge" class="badge is-hidden"></span></button>
+      <button class="tab" data-tab="link" role="tab" type="button">Link</button>
+    </nav>
+
+    <div class="rail-body">
+      <!-- ROOMS -->
+      <section id="tab-rooms" class="pane is-active" role="tabpanel">
+        <ul id="room-list" class="list"></ul>
+        <div class="btn-row">
+          <button id="open-create" class="btn btn-solid" type="button">+ New room</button>
+          <button id="open-join" class="btn" type="button">Join with code</button>
+        </div>
+        <div id="insecure-note" class="note is-hidden"><span>Private rooms need a secure (https) connection.</span> <a id="secure-link" class="is-hidden" href="/">Open secure site</a></div>
+      </section>
+
+      <!-- FRIENDS -->
+      <section id="tab-friends" class="pane" role="tabpanel">
+        <div class="code-card">
+          <span class="label">Your friend code</span>
+          <button id="copy-friend-code" class="code" type="button" title="Click to copy"><span id="friend-code-text">····-····</span></button>
+          <small id="friend-code-expiry"></small>
+        </div>
+        <form id="add-friend-form" class="inline-form">
+          <input id="add-friend-input" type="text" placeholder="THEIR CODE" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Friend code" />
+          <button class="btn btn-solid" type="submit">Add</button>
+        </form>
+        <ul id="friend-list" class="list"></ul>
+        <p id="friends-empty" class="hint">No friends yet. Swap codes to add someone.</p>
+      </section>
+
+      <!-- LINK (peer to peer) -->
+      <section id="tab-link" class="pane" role="tabpanel">
+        <p class="hint hint-top">A direct chat between two browsers. Ends when you close the tab.</p>
+        <div id="p2p-idle" class="stack">
+          <button id="p2p-host-btn" class="btn btn-solid btn-block" type="button">Start a private link</button>
+          <div class="or"><span>or</span></div>
+          <label class="field"><span>Paste a link or code</span>
+            <input id="p2p-join-input" type="text" placeholder="https://…#p2p-…" autocomplete="off" spellcheck="false" />
+          </label>
+          <button id="p2p-join-btn" class="btn btn-block" type="button">Connect</button>
+        </div>
+        <div id="p2p-waiting" class="stack is-hidden">
+          <label class="field"><span>Send this link to them</span>
+            <div class="inline-form"><input id="p2p-link-text" type="text" readonly /><button id="p2p-copy-link" class="btn" type="button">Copy</button></div>
+          </label>
+          <p class="waiting"><span class="pulse"></span> Waiting for them to open it…</p>
+          <button id="p2p-cancel-btn" class="btn btn-block" type="button">Cancel</button>
+        </div>
+        <div id="p2p-connected" class="stack is-hidden">
+          <p class="waiting live"><span class="pulse"></span> Connected, peer to peer</p>
+          <button id="p2p-leave-btn" class="btn btn-danger btn-block" type="button">End this chat</button>
+        </div>
+      </section>
+    </div>
+
+    <footer class="rail-foot">
+      <div class="me">
+        <span id="me-avatar" class="avatar" aria-hidden="true"></span>
+        <div class="me-text"><b id="me-name"></b><small id="me-role"></small></div>
+      </div>
+      <button id="open-settings" class="icon-btn" type="button" aria-label="Settings" title="Settings">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+      </button>
+    </footer>
+  </aside>
+
+  <!-- main stage -->
+  <main class="stage">
+    <header class="stage-head">
+      <button id="rail-open" class="icon-btn only-mobile" type="button" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+      </button>
+      <div class="stage-title">
+        <span id="room-prefix" class="prefix">#</span>
+        <h2 id="room-title">public</h2>
+        <span id="room-count" class="count"></span>
+      </div>
+      <span id="safety" class="safety is-hidden" title="Compare with your friend. Same code on both sides = nobody in the middle."></span>
+      <span id="expiry-pill" class="pill is-hidden" title="This room burns when the timer ends"><span class="pill-dot"></span><span id="expiry-text">--:--:--</span></span>
+      <span id="mode-stamp" class="stamp stamp-open">OPEN</span>
+      <button id="room-share" class="icon-btn is-hidden" type="button" aria-label="Share join code" title="Share join code">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M12 3v12M7 8l5-5 5 5M5 14v7h14v-7"/></svg>
+      </button>
+      <button id="room-leave" class="icon-btn is-hidden" type="button" aria-label="Leave room" title="Leave room">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M10 4H4v16h6M16 8l4 4-4 4M20 12H9"/></svg>
+      </button>
+    </header>
+
+    
+    <div id="offline-banner" class="banner is-hidden" role="alert">
+      <span id="offline-text">Disconnected.</span>
+      <button id="reconnect-btn" class="btn btn-sm" type="button">Reconnect</button>
+    </div>
+
+    <div class="stream-wrap">
+      <div id="stream" class="stream" aria-live="polite" aria-relevant="additions"></div>
+      <button id="jump-btn" class="jump is-hidden" type="button">↓ New messages</button>
+    </div>
+
+    <div id="typing" class="typing is-hidden"><span id="typing-text"></span><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+
+    <div class="composer-wrap">
+      <div id="edit-bar" class="edit-bar is-hidden" role="status"><span>Editing your message</span><button id="edit-cancel" class="linkish" type="button">Cancel</button></div>
+      <div id="upload-bar" class="edit-bar is-hidden" role="status"><span class="pulse"></span><span id="upload-text">Uploading…</span></div>
+
+      <div id="emoji-pop" class="pop is-hidden" role="dialog" aria-label="Emoji"></div>
+      <div id="gif-pop" class="pop pop-gif is-hidden" role="dialog" aria-label="GIFs">
+        <input id="gif-search" class="gif-search" type="search" placeholder="Search GIFs" autocomplete="off" spellcheck="false" aria-label="Search GIFs" />
+        <div id="gif-grid" class="gif-grid"></div>
+        <p class="pop-foot">Powered by GIPHY. Searches go through this server.</p>
+      </div>
+
+      <form id="composer" class="composer" autocomplete="off">
+      <div class="tools">
+        <button id="btn-emoji" class="tool" type="button" aria-label="Emoji" title="Emoji" aria-expanded="false">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><circle cx="12" cy="12" r="9"/><path d="M8 14.5c1 1.4 2.4 2 4 2s3-.6 4-2M9 9.5h.01M15 9.5h.01"/></svg>
+        </button>
+        <button id="btn-gif" class="tool tool-txt is-hidden" type="button" aria-label="GIFs" title="GIFs" aria-expanded="false">GIF</button>
+        <button id="btn-attach" class="tool" type="button" aria-label="Attach a file" title="Attach a file">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M20 11.5 12.5 19a5 5 0 0 1-7-7L13 4.5a3.3 3.3 0 0 1 4.7 4.7l-7.4 7.4a1.6 1.6 0 0 1-2.3-2.3L15 7.3"/></svg>
+        </button>
+        <input id="file-input" class="is-hidden" type="file" tabindex="-1" aria-hidden="true" />
+      </div>
+      <input id="composer-input" type="text" maxlength="1000" placeholder="Say something…" autocomplete="off" autocorrect="on" enterkeyhint="send" aria-label="Message" />
+      <button id="send-btn" class="send" type="submit" aria-label="Send">
+        <span>SEND</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 12 21 4l-5 16-4-7z"/></svg>
+      </button>
+    </form>
+    </div>
+  </main>
+
+  <!-- settings drawer -->
+  <aside id="settings" class="drawer" aria-hidden="true" aria-label="Settings">
+    <header class="drawer-head">
+      <h3>Settings</h3>
+      <button id="settings-close" class="icon-btn" type="button" aria-label="Close settings">✕</button>
+    </header>
+    <div class="drawer-body">
+
+      <details class="sec" open>
+        <summary>Look</summary>
+        <div id="theme-grid" class="theme-grid"></div>
+
+        <details id="custom-sec" class="sub">
+          <summary>Make your own theme</summary>
+          <div class="custom-grid">
+            <label class="swatch-in"><span>Background</span><input id="ct-bg" type="color" value="#0e0f0c" /></label>
+            <label class="swatch-in"><span>Panels</span><input id="ct-panel" type="color" value="#171914" /></label>
+            <label class="swatch-in"><span>Text</span><input id="ct-ink" type="color" value="#ece8dc" /></label>
+            <label class="swatch-in"><span>Accent</span><input id="ct-accent" type="color" value="#c6ff3d" /></label>
+            <label class="swatch-in"><span>Alert</span><input id="ct-hot" type="color" value="#ff5c39" /></label>
+          </div>
+          <div class="row"><span>Corners</span>
+            <select id="ct-radius" class="select"><option value="0px">Sharp</option><option value="3px">Tight</option><option value="8px">Soft</option><option value="16px">Round</option></select>
+          </div>
+          <div class="row"><span>Shadows</span>
+            <select id="ct-shadow" class="select"><option value="hard">Hard offset</option><option value="soft">Soft glow</option><option value="none">None</option></select>
+          </div>
+          <div class="row"><span>Monospace everything</span>
+            <label class="switch"><input id="ct-mono" type="checkbox" /><span></span></label>
+          </div>
+          <div class="btn-row">
+            <button id="ct-use" class="btn btn-solid" type="button">Use it</button>
+            <button id="ct-share" class="btn" type="button">Copy theme code</button>
+          </div>
+          <label class="field"><span>Got a theme code from a friend?</span>
+            <div class="inline-form"><input id="ct-code" type="text" placeholder="ZT1.…" spellcheck="false" autocomplete="off" /><button id="ct-import" class="btn" type="button">Load</button></div>
+          </label>
+        </details>
+
+        <div class="row"><span>Text size</span><input id="set-fontscale" class="range" type="range" min="85" max="130" step="5" /></div>
+        <div class="row"><span>Compact messages</span><label class="switch"><input id="set-compact" type="checkbox" /><span></span></label></div>
+        <div class="row"><span>24-hour clock</span><label class="switch"><input id="set-24h" type="checkbox" /><span></span></label></div>
+        <div class="row"><span>Animations</span><label class="switch"><input id="set-motion" type="checkbox" /><span></span></label></div>
+        <div class="row"><span>Intro on first load</span><label class="switch"><input id="set-boot" type="checkbox" /><span></span></label></div>
+      </details>
+
+      <details class="sec">
+        <summary>Sound</summary>
+        <div class="row"><span>Play a tick for new messages</span><label class="switch"><input id="set-sound" type="checkbox" /><span></span></label></div>
+      </details>
+
+      <details class="sec">
+        <summary>Translate</summary>
+        <div class="row"><span>Translate messages automatically</span><label class="switch"><input id="set-translate" type="checkbox" /><span></span></label></div>
+        <div class="row"><span>Into</span><select id="set-translate-to" class="select"></select></div>
+        <p id="translate-note" class="hint"></p>
+      </details>
+
+      <details class="sec">
+        <summary>Privacy &amp; cleanup</summary>
+        <div class="row"><span>Remember my rooms on this device</span><label class="switch"><input id="set-remember" type="checkbox" /><span></span></label></div>
+        <div class="row"><span>Sign out when I close this tab</span><label class="switch"><input id="set-wipe-close" type="checkbox" /><span></span></label></div>
+        <div class="row"><span>Blur chat when I switch away</span><label class="switch"><input id="set-blur" type="checkbox" /><span></span></label></div>
+        <p class="hint">Private chats are never saved. Public messages are kept for a while.</p>
+        <div class="btn-row">
+          <button id="btn-forget-rooms" class="btn" type="button">Forget saved rooms</button>
+          <button id="btn-panic" class="btn btn-danger" type="button">Wipe everything now</button>
+        </div>
+      </details>
+
+      <details id="profile-sec" class="sec is-hidden">
+        <summary>Profile</summary>
+        <form id="prof-form" class="form" autocomplete="off" novalidate>
+          <div class="prof-pics">
+            <div id="prof-banner-prev" class="prof-banner"></div>
+            <span id="prof-avatar-prev" class="prof-avatar"></span>
+          </div>
+          <div class="btn-row">
+            <button id="prof-avatar-btn" class="btn" type="button">Picture</button>
+            <button id="prof-banner-btn" class="btn" type="button">Banner</button>
+          </div>
+          <div class="btn-row prof-rm">
+            <button id="prof-avatar-rm" class="linkish" type="button">Remove picture</button>
+            <button id="prof-banner-rm" class="linkish" type="button">Remove banner</button>
+          </div>
+          <input id="prof-file" class="is-hidden" type="file" accept="image/png,image/jpeg,image/gif,image/webp" tabindex="-1" aria-hidden="true" />
+          <label class="field"><span>Display name</span><input id="prof-display" type="text" maxlength="32" /></label>
+          <label class="field"><span>Status</span><input id="prof-status" type="text" maxlength="60" placeholder="What you're up to" /></label>
+          <label class="field"><span>Pronouns</span><input id="prof-pronouns" type="text" maxlength="24" /></label>
+          <label class="field"><span>Bio</span><textarea id="prof-bio" maxlength="300" rows="4"></textarea><small id="prof-bio-count">0 / 300</small></label>
+          <div class="custom-grid">
+            <label class="swatch-in"><span>Accent</span><input id="prof-accent" type="color" value="#e2b45c" /></label>
+            <label class="swatch-in"><span>Background</span><input id="prof-bg" type="color" value="#161513" /></label>
+          </div>
+          <div class="field"><span>Links</span>
+            <div id="prof-links" class="prof-links"></div>
+            <button id="prof-link-add" class="btn btn-block" type="button">+ Add a link</button>
+          </div>
+          <div class="row"><span>Anyone with the link can see my page</span><label class="switch"><input id="prof-public" type="checkbox" /><span></span></label></div>
+          <div id="prof-msg" class="alert is-hidden" role="alert"></div>
+          <div class="btn-row">
+            <button class="btn btn-solid" type="submit"><span class="btn-text">Save profile</span><span class="btn-spin" aria-hidden="true"></span></button>
+            <a id="prof-view" class="btn" href="/" target="_blank" rel="noopener">View my page</a>
+          </div>
+        </form>
+      </details>
+
+      <details class="sec">
+        <summary>Account</summary>
+        <div class="row"><span id="account-line">Signed in</span></div>
+        <form id="pw-form" class="form is-hidden" autocomplete="on">
+          <label class="field"><span>Current password</span><input id="pw-current" type="password" autocomplete="current-password" required /></label>
+          <label class="field"><span>New password</span><input id="pw-next" type="password" autocomplete="new-password" minlength="8" required /></label>
+          <div id="pw-msg" class="alert is-hidden" role="alert"></div>
+          <button class="btn btn-block" type="submit"><span class="btn-text">Change password</span><span class="btn-spin" aria-hidden="true"></span></button>
+        </form>
+        <div class="btn-row">
+          <button id="btn-logout" class="btn" type="button">Sign out</button>
+          <button id="btn-logout-all" class="btn btn-danger is-hidden" type="button">Sign out everywhere</button>
+        </div>
+      </details>
+    </div>
+  </aside>
+
+  <!-- create room -->
+  <div id="dlg-create" class="modal" role="dialog" aria-modal="true" aria-labelledby="cr-title">
+    <div class="modal-card">
+      <header class="modal-head"><h3 id="cr-title">New room</h3><button class="icon-btn" data-close type="button" aria-label="Close">✕</button></header>
+
+      <form id="cr-form" class="form">
+        <label class="field"><span>Room name</span>
+          <input id="cr-name" type="text" maxlength="40" placeholder="Study group" autocomplete="off" required />
+        </label>
+        <label class="field"><span>Delete the room after</span>
+          <select id="cr-ttl" class="select select-wide">
+            <option value="900000">15 minutes</option>
+            <option value="3600000">1 hour</option>
+            <option value="21600000">6 hours</option>
+            <option value="86400000" selected>24 hours</option>
+            <option value="259200000">3 days</option>
+            <option value="604800000">7 days</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </label>
+        <div id="cr-custom" class="field-row is-hidden">
+          <input id="cr-custom-num" type="number" min="5" max="10080" value="90" aria-label="Custom amount" />
+          <select id="cr-custom-unit" class="select" aria-label="Unit"><option value="60000">minutes</option><option value="3600000">hours</option><option value="86400000">days</option></select>
+        </div>
+        <label class="check"><input id="cr-burn" type="checkbox" /><span>Also delete it as soon as everyone has left</span></label>
+        <div id="cr-error" class="alert is-hidden" role="alert"></div>
+        <button id="cr-submit" class="btn btn-solid btn-block" type="submit"><span class="btn-text">Create room</span><span class="btn-spin" aria-hidden="true"></span></button>
+      </form>
+
+      <div id="cr-result" class="is-hidden">
+        <p class="hint hint-top">This code is the only way in.</p>
+        <button id="cr-copy-code" class="bigcode" type="button" title="Click to copy"><span id="cr-code">XXXX-XXXX-XXXX-XXXX</span></button>
+        <p id="cr-expires" class="fine"></p>
+        <div class="btn-row">
+          <button id="cr-copy-link" class="btn" type="button">Copy invite link</button>
+          <button id="cr-open" class="btn btn-solid" type="button">Open room</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- join room -->
+  <div id="dlg-join" class="modal" role="dialog" aria-modal="true" aria-labelledby="jn-title">
+    <div class="modal-card">
+      <header class="modal-head"><h3 id="jn-title">Join a room</h3><button class="icon-btn" data-close type="button" aria-label="Close">✕</button></header>
+      <form id="jn-form" class="form">
+        <label class="field"><span>Join code</span>
+          <input id="jn-code" class="mono-input" type="text" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" required />
+        </label>
+        <div id="jn-error" class="alert is-hidden" role="alert"></div>
+        <button id="jn-submit" class="btn btn-solid btn-block" type="submit"><span class="btn-text">Join</span><span class="btn-spin" aria-hidden="true"></span></button>
+      </form>
+    </div>
+  </div>
+
+  <div id="dlg-unlock" class="modal" role="dialog" aria-modal="true" aria-labelledby="ul-title">
+    <div class="modal-card">
+      <header class="modal-head"><h3 id="ul-title">Unlock messages</h3><button class="icon-btn" data-close type="button" aria-label="Close">✕</button></header>
+      <form id="unlock-form" class="form">
+        <p class="hint hint-top">Enter your password to read friend messages on this device.</p>
+        <label class="field"><span>Password</span><input id="unlock-password" type="password" autocomplete="current-password" required /></label>
+        <div id="unlock-error" class="alert is-hidden" role="alert"></div>
+        <button class="btn btn-solid btn-block" type="submit"><span class="btn-text">Unlock</span><span class="btn-spin" aria-hidden="true"></span></button>
+      </form>
+    </div>
+  </div>
+
+  <!-- picture viewer -->
+  <div id="dlg-media" class="modal modal-media" role="dialog" aria-modal="true" aria-label="Picture">
+    <div class="media-card">
+      <img id="media-img" alt="" />
+      <div class="btn-row">
+        <button id="media-save" class="btn" type="button">Save</button>
+        <button class="btn btn-solid" data-close type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- someone's profile -->
+  <div id="dlg-profile" class="modal" role="dialog" aria-modal="true" aria-labelledby="pf-name">
+    <div class="modal-card pf-card">
+      <div id="pf-banner" class="pf-banner"></div>
+      <button class="icon-btn pf-x" data-close type="button" aria-label="Close">✕</button>
+      <div class="pf-top">
+        <span id="pf-avatar" class="pf-avatar" aria-hidden="true"></span>
+        <div class="pf-names"><h3 id="pf-name"></h3><p id="pf-handle" class="pf-handle"></p></div>
+      </div>
+      <p id="pf-status" class="pf-status is-hidden"></p>
+      <p id="pf-bio" class="pf-bio"></p>
+      <div id="pf-links" class="pf-links"></div>
+      <p id="pf-meta" class="pf-meta"></p>
+      <a id="pf-page" class="btn btn-block" href="/" target="_blank" rel="noopener">Open full page</a>
+    </div>
+  </div>
+
+  <!-- confirm -->
+  <div id="dlg-confirm" class="modal" role="alertdialog" aria-modal="true" aria-labelledby="cf-title">
+    <div class="modal-card modal-sm">
+      <header class="modal-head"><h3 id="cf-title">Are you sure?</h3></header>
+      <p id="cf-text" class="modal-text"></p>
+      <div class="btn-row">
+        <button id="cf-cancel" class="btn" type="button">Cancel</button>
+        <button id="cf-ok" class="btn btn-danger" type="button">Do it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/vendor/peerjs.min.js"></script>
+<script src="/js/settings.js?v=2.5"></script>
+<script src="/js/themes.js?v=2.5"></script>
+<script src="/js/crypto.js?v=2.5"></script>
+<script src="/js/keys.js?v=2.5"></script>
+<script src="/js/pow.js?v=2.5"></script>
+<script src="/js/api.js?v=2.5"></script>
+<script src="/js/translate.js?v=2.5"></script>
+<script src="/js/peer-session.js?v=2.5"></script>
+<script src="/js/net.js?v=2.5"></script>
+<script src="/js/ui.js?v=2.5"></script>
+<script src="/js/attach.js?v=2.5"></script>
+<script src="/js/emoji.js?v=2.5"></script>
+<script src="/js/main.js?v=2.5"></script>
+</body>
+</html>
