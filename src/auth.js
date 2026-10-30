@@ -42,13 +42,21 @@ function signToken(user) {
 }
 
 // `secure` follows the real protocol, so plain-http LAN access still signs in.
+// Inside another site's frame (the page sends X-Zent-Embed), a Lax cookie is never sent, so that sign-in gets a
+// Partitioned one instead: it only exists under the embedding site and can't be used by any other site.
+// Cross-site requests are still refused by the Sec-Fetch-Site / Origin checks in server.js.
+const isEmbedded = (req) => req.get('x-zent-embed') === '1';
+const cookieOpts = (req) => isEmbedded(req)
+  ? { httpOnly: true, sameSite: 'none', secure: true, partitioned: true }
+  : { httpOnly: true, sameSite: 'lax', secure: !!req.secure };
+
 function setCookie(req, res, token, remember = true, maxAgeMs = REMEMBER_MS) {
-  const opts = { httpOnly: true, sameSite: 'lax', secure: !!req.secure };
+  const opts = cookieOpts(req);
   if (remember) opts.maxAge = maxAgeMs;
   res.cookie('token', token, opts);
 }
 
-const clearCookie = (req, res) => res.clearCookie('token', { httpOnly: true, sameSite: 'lax', secure: !!req.secure });
+const clearCookie = (req, res) => res.clearCookie('token', cookieOpts(req));
 
 // The one place a cookie becomes a session. Used by HTTP routes and sockets.
 function sessionFromCookie(header) {

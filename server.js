@@ -28,10 +28,14 @@ const server = http.createServer(app);
 // trusting only loopback keeps X-Forwarded-* spoof-proof from the LAN.
 app.set('trust proxy', 'loopback');
 
+// Sites allowed to show ZentEncrypted inside a frame (Fablehop). Comma-separated; set EMBED_ORIGINS= to allow none.
+const embedOrigins = (process.env.EMBED_ORIGINS ?? 'https://slizsy.github.io').split(',').map((s) => s.trim()).filter(Boolean);
+
 app.use(
   helmet({
     hsts: false, // TLS is handled by Cloudflare; Node may also be reached over plain http on the LAN
     crossOriginEmbedderPolicy: false,
+    xFrameOptions: false, // can't name another site; frame-ancestors below decides who may embed us
     contentSecurityPolicy: {
       useDefaults: false,
       directives: {
@@ -46,7 +50,7 @@ app.use(
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         formAction: ["'self'"],
-        frameAncestors: ["'none'"],
+        frameAncestors: ["'self'", ...embedOrigins],
       },
     },
   })

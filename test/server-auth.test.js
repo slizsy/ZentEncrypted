@@ -15,7 +15,8 @@ test('health + security headers (no HSTS, strict CSP, no upgrade-insecure-reques
   assert.ok(csp.includes("script-src 'self'") && csp.includes("style-src 'self'"));
   assert.ok(!csp.includes('unsafe-inline'));
   assert.ok(!csp.includes('upgrade-insecure-requests'));
-  assert.ok(csp.includes("frame-ancestors 'none'"));
+  assert.ok(csp.includes("frame-ancestors 'self' https://slizsy.github.io"), csp);
+  assert.strictEqual(r.headers.get('x-frame-options'), null);
 });
 
 test('register validation: reserved names, bad chars, short passwords, non-strings', async () => {
