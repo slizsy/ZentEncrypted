@@ -5,6 +5,8 @@ const Api = (() => {
   async function raw(path, method, body, proof) {
     const headers = { 'Content-Type': 'application/json' };
     if (proof) headers['X-Zent-Pow'] = proof;
+    // Running inside another site's frame: ask for a sign-in cookie that works there.
+    if (window.top !== window) headers['X-Zent-Embed'] = '1';
     const res = await fetch(path, { method, credentials: 'include', headers, body: body ? JSON.stringify(body) : undefined });
     let data = {};
     try { data = await res.json(); } catch { /* empty body */ }
