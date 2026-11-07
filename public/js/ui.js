@@ -40,6 +40,7 @@ const Ui = (() => {
     if (!m.classList.contains('is-open') && document.activeElement && document.activeElement !== document.body) openers.set(id, document.activeElement);
     m.classList.add('is-open');
     if (!openModals.includes(id)) openModals.push(id);
+    m.dispatchEvent(new CustomEvent('modal:opened', { bubbles: true }));
     const first = m.querySelector('input:not([type=checkbox]):not(.is-hidden), button:not([data-close])');
     if (first) setTimeout(() => first.focus({ preventScroll: true }), 30);
   }

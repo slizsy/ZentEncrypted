@@ -2195,6 +2195,8 @@
     $('rail-open').addEventListener('click', openRail);
     $('rail-close').addEventListener('click', closeRail);
     $('scrim').addEventListener('click', closeRail);
+    // on phones the sidebar would otherwise stay open behind the dialog
+    document.addEventListener('modal:opened', closeRail);
     $('open-settings').addEventListener('click', openSettings);
     $('settings-close').addEventListener('click', closeSettings);
 
