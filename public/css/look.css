@@ -238,3 +238,9 @@ input:focus, textarea:focus, .select:focus { border-color: var(--accent); box-sh
 @media (max-width: 820px) {
   .modal-card, .pf-card { border-radius: 18px 18px 0 0; }
 }
+
+/* .icon-btn (components.css) sets display after layout.css hides .only-mobile, which put the
+   menu and close buttons on desktop too. Keep them phone-only. */
+@media (min-width: 821px) {
+  .only-mobile { display: none !important; }
+}
