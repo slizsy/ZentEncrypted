@@ -211,7 +211,7 @@ input:focus, textarea:focus, .select:focus { border-color: var(--accent); box-sh
 /* ---------- panels: modals, settings drawer, toasts ---------- */
 .modal-card, .drawer { border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--soft-shadow); }
 .drawer { border-radius: 18px 0 0 18px; }
-.modal-head h3, .drawer-head h2 { font-weight: 700; letter-spacing: -0.01em; }
+.modal-head h3, .drawer-head h3 { font-weight: 700; letter-spacing: -0.01em; }
 .sec { border: 1px solid var(--line); border-radius: 12px; }
 .sec summary { font-family: var(--font-ui); text-transform: none; letter-spacing: 0; font-weight: 700; }
 .toast { border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--soft-shadow); background: var(--panel); color: var(--ink); font-family: var(--font-ui); }
@@ -232,4 +232,9 @@ input:focus, textarea:focus, .select:focus { border-color: var(--accent); box-sh
 /* the logo is black + blue: on dark themes it sits on a small white tile so it stays visible */
 :root[data-dark='1'] .rail-brand img, :root[data-dark='1'] .brand-logo, :root[data-dark='1'] .ticket-brand img, :root[data-dark='1'] .adm-brand img {
   background: #fff; border-radius: 22%; padding: 3px;
+}
+
+/* on phones dialogs slide up from the bottom edge as a sheet: only round the top corners */
+@media (max-width: 820px) {
+  .modal-card, .pf-card { border-radius: 18px 18px 0 0; }
 }
