@@ -2,7 +2,7 @@
 const Settings = (() => {
   const KEY = 'zent_settings_v2';
   const defaults = {
-    theme: 'azure',
+    theme: 'nebula',
     sound: true,
     hour24: false,
     compact: false,

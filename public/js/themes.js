@@ -85,7 +85,7 @@ const Themes = (() => {
 
   /** Applies a theme by name ('signal', …, 'custom') to the page. */
   function apply(name) {
-    const t = name === 'custom' ? getCustom() : PRESETS[name] || PRESETS.azure;
+    const t = name === 'custom' ? getCustom() : PRESETS[name] || PRESETS.nebula;
     const root = document.documentElement;
     const set = (k, v) => root.style.setProperty(k, v);
     set('--bg', t.bg); set('--panel', t.panel); set('--ink', t.ink);
@@ -94,7 +94,7 @@ const Themes = (() => {
     set('--shadow', SHADOW_CSS[t.shadow][0]); set('--shadow-sm', SHADOW_CSS[t.shadow][1]);
     set('--name-l', isDark(t.bg) ? '70%' : '36%');
     set('--grain', isDark(t.bg) ? '0.07' : '0.10');
-    root.dataset.theme = name in PRESETS || name === 'custom' ? name : 'azure';
+    root.dataset.theme = name in PRESETS || name === 'custom' ? name : 'nebula';
     root.dataset.scan = t.scan ? '1' : '0';
     root.dataset.mono = t.mono ? '1' : '0';
     root.style.colorScheme = isDark(t.bg) ? 'dark' : 'light';

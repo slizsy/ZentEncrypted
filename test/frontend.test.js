@@ -373,7 +373,7 @@ test('settings: themes switch, custom theme round-trips through a share code, to
 
   const swatches = a.document.querySelectorAll('#theme-grid .swatch');
   assert.strictEqual(swatches.length, 12, '11 presets + custom');
-  assert.strictEqual(a.document.documentElement.dataset.theme, 'azure', 'new default look');
+  assert.strictEqual(a.document.documentElement.dataset.theme, 'nebula', 'new default look');
   const paper = Array.from(swatches).find((s) => /paper/i.test(s.textContent));
   a.click(paper);
   assert.strictEqual(a.document.documentElement.dataset.theme, 'paper');
