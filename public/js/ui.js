@@ -33,9 +33,11 @@ const Ui = (() => {
 
   /* ---------------- modals ---------------- */
   const openModals = [];
+  const openers = new Map(); // modal id -> the element that had focus before it opened
   function openModal(id) {
     const m = $(id);
     if (!m) return;
+    if (!m.classList.contains('is-open') && document.activeElement && document.activeElement !== document.body) openers.set(id, document.activeElement);
     m.classList.add('is-open');
     if (!openModals.includes(id)) openModals.push(id);
     const first = m.querySelector('input:not([type=checkbox]):not(.is-hidden), button:not([data-close])');
@@ -48,6 +50,14 @@ const Ui = (() => {
     if (m && m.classList.contains('is-open')) {
       m.classList.remove('is-open');
       m.dispatchEvent(new CustomEvent('modal:closed'));
+      // put keyboard focus back where it was, if that control is still on screen
+      const back = openers.get(id);
+      openers.delete(id);
+      const cur = document.activeElement;
+      const focusLost = !cur || cur === document.body || m.contains(cur);
+      if (focusLost && back && back.isConnected && back.getClientRects().length > 0) {
+        try { back.focus({ preventScroll: true }); } catch { /* ignore */ }
+      }
     }
   }
   const topModal = () => openModals[openModals.length - 1] || null;
