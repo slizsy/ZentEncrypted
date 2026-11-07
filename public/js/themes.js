@@ -1,6 +1,7 @@
 // Built-in themes and the custom theme (shareable as a ZT1. code).
 const Themes = (() => {
   const PRESETS = {
+    nebula:   { label: 'Nebula',   bg: '#07060e', panel: '#13111f', ink: '#ecebff', accent: '#8b5cf6', hot: '#ff4d8d', radius: '14px', shadow: 'soft', mono: false, scan: false },
     azure:    { label: 'Azure',    bg: '#f4f7fb', panel: '#ffffff', ink: '#0b1526', accent: '#1570ef', hot: '#e5484d', radius: '12px', shadow: 'soft', mono: false, scan: false },
     midnight: { label: 'Midnight', bg: '#060a12', panel: '#0c1422', ink: '#e6eefb', accent: '#2f8cff', hot: '#ff5c63', radius: '12px', shadow: 'soft', mono: false, scan: false },
     graphite: { label: 'Graphite', bg: '#161513', panel: '#1f1e1b', ink: '#e8e3d8', accent: '#e2b45c', hot: '#d4574e', radius: '3px',  shadow: 'hard', mono: false, scan: false },
