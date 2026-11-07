@@ -212,7 +212,8 @@ input:focus, textarea:focus, .select:focus { border-color: var(--accent); box-sh
 .modal-card, .drawer { border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--soft-shadow); }
 .drawer { border-radius: 18px 0 0 18px; }
 .modal-head h3, .drawer-head h3 { font-weight: 700; letter-spacing: -0.01em; }
-.sec { border: 1px solid var(--line); border-radius: 12px; }
+.sec { border: 1px solid var(--line); border-radius: 12px; padding-left: 0.95rem; padding-right: 0.95rem; margin-top: 0.6rem; background: color-mix(in srgb, var(--bg) 35%, var(--panel)); }
+.sub { border-radius: 10px; }
 .sec summary { font-family: var(--font-ui); text-transform: none; letter-spacing: 0; font-weight: 700; }
 .toast { border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--soft-shadow); background: var(--panel); color: var(--ink); font-family: var(--font-ui); }
 .pill { border-width: 1px; border-radius: 99px; }
