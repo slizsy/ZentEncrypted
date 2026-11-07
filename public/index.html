@@ -87,8 +87,8 @@
       <p id="ticket-sub">Sign in to pick up where you left off.</p>
     </div>
     <div class="ticket-tabs" role="tablist">
-      <button id="tab-login" class="ttab is-active" role="tab" type="button">Sign in</button>
-      <button id="tab-register" class="ttab" role="tab" type="button">New account</button>
+      <button id="tab-login" class="ttab is-active" role="tab" aria-selected="true" aria-controls="login-form" type="button">Sign in</button>
+      <button id="tab-register" class="ttab" role="tab" aria-selected="false" aria-controls="register-form" type="button">New account</button>
     </div>
 
     <div id="auth-error" class="alert is-hidden" role="alert"></div>
@@ -137,9 +137,9 @@
     </header>
 
     <nav class="tabs" role="tablist">
-      <button class="tab is-active" data-tab="rooms" role="tab" type="button">Rooms<span id="rooms-badge" class="badge is-hidden"></span></button>
-      <button class="tab" data-tab="friends" role="tab" type="button">Friends<span id="friends-badge" class="badge is-hidden"></span></button>
-      <button class="tab" data-tab="link" role="tab" type="button">Link</button>
+      <button class="tab is-active" data-tab="rooms" role="tab" aria-selected="true" aria-controls="tab-rooms" type="button">Rooms<span id="rooms-badge" class="badge is-hidden"></span></button>
+      <button class="tab" data-tab="friends" role="tab" aria-selected="false" aria-controls="tab-friends" type="button">Friends<span id="friends-badge" class="badge is-hidden"></span></button>
+      <button class="tab" data-tab="link" role="tab" aria-selected="false" aria-controls="tab-link" type="button">Link</button>
     </nav>
 
     <div class="rail-body">

@@ -323,6 +323,8 @@
     const login = which === 'login';
     $('tab-login').classList.toggle('is-active', login);
     $('tab-register').classList.toggle('is-active', !login);
+    $('tab-login').setAttribute('aria-selected', String(login));
+    $('tab-register').setAttribute('aria-selected', String(!login));
     $('ticket-title').textContent = login ? 'Welcome back' : 'Join ZentEncrypted';
     $('ticket-sub').textContent = login ? 'Sign in to pick up where you left off.' : 'No email needed. Just a name and a password.';
     $('login-form').classList.toggle('is-hidden', !login);
@@ -940,7 +942,11 @@
    *  friends
    * ===================================================================== */
   function showTab(name) {
-    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('is-active', t.dataset.tab === name));
+    document.querySelectorAll('.tab').forEach((t) => {
+      const on = t.dataset.tab === name;
+      t.classList.toggle('is-active', on);
+      t.setAttribute('aria-selected', String(on));
+    });
     document.querySelectorAll('.pane').forEach((p) => p.classList.toggle('is-active', p.id === `tab-${name}`));
     if (name === 'friends') loadMyCode();
   }
