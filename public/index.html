@@ -1,25 +1,25 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="graphite">
+<html lang="en" data-theme="azure">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>ZENT — sealed chat</title>
-<meta name="description" content="Chat with private encrypted rooms and a public room." />
-<meta name="theme-color" content="#161513" id="meta-theme" />
+<title>ZentEncrypted</title>
+<meta name="description" content="ZentEncrypted: self-hosted chat with end-to-end encrypted private rooms and friend messages." />
+<meta name="theme-color" content="#f4f7fb" id="meta-theme" />
 <meta name="color-scheme" content="dark light" />
 
-<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" href="/icons/favicon-32.png" type="image/png" sizes="32x32" />
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 <link rel="manifest" href="/manifest.webmanifest" />
 
 <link rel="preload" href="/fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="/css/base.css?v=2.5" />
-<link rel="stylesheet" href="/css/layout.css?v=2.5" />
-<link rel="stylesheet" href="/css/components.css?v=2.5" />
-<link rel="stylesheet" href="/css/animations.css?v=2.5" />
-<link rel="stylesheet" href="/css/features.css?v=2.5" />
+<link rel="stylesheet" href="/css/base.css?v=2.6" />
+<link rel="stylesheet" href="/css/layout.css?v=2.6" />
+<link rel="stylesheet" href="/css/components.css?v=2.6" />
+<link rel="stylesheet" href="/css/animations.css?v=2.6" />
+<link rel="stylesheet" href="/css/features.css?v=2.6" />
+<link rel="stylesheet" href="/css/look.css?v=2.6" />
 </head>
 <body>
 
@@ -43,19 +43,49 @@
 <!-- =========================  SIGN IN  ========================= -->
 <main id="auth-screen" class="auth">
   <section class="hero">
-    <h1 class="wordmark" aria-label="ZENT">
-      <span class="wm-main">ZENT</span><span class="wm-slash">//</span>
-    </h1>
-    <p class="hero-line">Private rooms. Nothing kept.</p>
-    <ul class="hero-facts">
-      <li><b>01</b> Rooms are encrypted on your device.</li>
-      <li><b>02</b> They delete themselves.</li>
-      <li><b>03</b> No email needed.</li>
-    </ul>
-    <div class="hero-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="brand">
+      <img class="brand-logo" src="/icons/logo.png" alt="" width="52" height="52" />
+      <span class="brand-name">ZentEncrypted</span>
+    </div>
+    <h1 class="hero-title">Chat that stays <span class="grad">yours</span>.</h1>
+    <p class="hero-sub">Private rooms and friend messages are encrypted on your device before they leave it. The server only ever holds scrambled data it can't read, and it runs on our own hardware, not a big tech cloud.</p>
+
+    <div class="features">
+      <article class="feat">
+        <span class="feat-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+        <h3>End-to-end encrypted</h3>
+        <p>Private rooms and friend chats are locked with keys only you and the people you talk to have.</p>
+      </article>
+      <article class="feat">
+        <span class="feat-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-9Z"/></svg></span>
+        <h3>Rooms that burn</h3>
+        <p>Start a room with a join code. It deletes itself on a timer or when everyone leaves.</p>
+      </article>
+      <article class="feat">
+        <span class="feat-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-6"/></svg></span>
+        <h3>Friends, even offline</h3>
+        <p>Messages to friends wait for them, still encrypted, until they're back. Pictures and files too.</p>
+      </article>
+      <article class="feat">
+        <span class="feat-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+        <h3>No ads, no tracking</h3>
+        <p>No email or phone number needed. Photos have their hidden location data removed before upload.</p>
+      </article>
+    </div>
+
+    <ol class="steps">
+      <li><b>1</b><span>Pick a name, or jump in as a guest.</span></li>
+      <li><b>2</b><span>Chat in #public, or start a private room.</span></li>
+      <li><b>3</b><span>Share the join code. Only people with it can read along.</span></li>
+    </ol>
   </section>
 
   <section class="ticket">
+    <div class="ticket-brand">
+      <img src="/icons/logo.png" alt="ZentEncrypted" width="64" height="64" />
+      <h2 id="ticket-title">Welcome back</h2>
+      <p id="ticket-sub">Sign in to pick up where you left off.</p>
+    </div>
     <div class="ticket-tabs" role="tablist">
       <button id="tab-login" class="ttab is-active" role="tab" type="button">Sign in</button>
       <button id="tab-register" class="ttab" role="tab" type="button">New account</button>
@@ -89,8 +119,8 @@
 
     <div class="or"><span>or</span></div>
     <button id="guest-btn" class="btn btn-block" type="button">Enter as guest</button>
-    <p class="fine">Guest accounts last 24h.</p>
-    <a class="src-link" href="https://github.com/slizsy/ZentEncrypted" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg><span>Source</span></a>
+    <p class="fine">Guest sessions last 24 hours. Make an account to keep friends and messages.</p>
+    <a class="src-link" href="https://github.com/slizsy/ZentEncrypted" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg><span>Open source on GitHub</span></a>
   </section>
 </main>
 
@@ -101,7 +131,7 @@
   <!-- sidebar -->
   <aside id="rail" class="rail" aria-label="Navigation">
     <header class="rail-head">
-      <span class="wordmark-sm">ZENT<span class="wm-slash">//</span></span>
+      <span class="rail-brand"><img src="/icons/logo.png" alt="" width="28" height="28" /><span>ZentEncrypted</span></span>
       <span id="signal" class="signal" data-state="down" title="Connection" role="img" aria-label="Connection status"><i></i><i></i><i></i><i></i></span>
       <button id="rail-close" class="icon-btn only-mobile" type="button" aria-label="Close menu">✕</button>
     </header>
@@ -168,6 +198,10 @@
         <span id="me-avatar" class="avatar" aria-hidden="true"></span>
         <div class="me-text"><b id="me-name"></b><small id="me-role"></small></div>
       </div>
+      <button id="open-staff" class="icon-btn staff-btn is-hidden" type="button" aria-label="Staff panel" title="Staff panel">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3Z"/></svg>
+        <span id="staff-badge" class="badge is-hidden"></span>
+      </button>
       <button id="open-settings" class="icon-btn" type="button" aria-label="Settings" title="Settings">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
       </button>
@@ -197,6 +231,11 @@
     </header>
 
     
+    <div id="announce" class="announce is-hidden" role="status">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1ZM16 9a4 4 0 0 1 0 6"/></svg>
+      <span id="announce-text"></span>
+      <button id="announce-close" class="icon-btn" type="button" aria-label="Hide announcement">✕</button>
+    </div>
     <div id="offline-banner" class="banner is-hidden" role="alert">
       <span id="offline-text">Disconnected.</span>
       <button id="reconnect-btn" class="btn btn-sm" type="button">Reconnect</button>
@@ -456,7 +495,32 @@
       <div id="pf-links" class="pf-links"></div>
       <p id="pf-meta" class="pf-meta"></p>
       <a id="pf-page" class="btn btn-block" href="/" target="_blank" rel="noopener">Open full page</a>
+      <div id="pf-staff" class="pf-staff is-hidden"></div>
     </div>
+  </div>
+
+  <!-- report a message -->
+  <div id="dlg-report" class="modal" role="dialog" aria-modal="true" aria-labelledby="rp-title">
+    <form id="rp-form" class="modal-card form">
+      <header class="modal-head"><h3 id="rp-title">Report <span id="rp-who"></span></h3><button class="icon-btn" data-close type="button" aria-label="Close">✕</button></header>
+      <label class="field"><span>What's wrong?</span>
+        <select id="rp-reason" class="select">
+          <option value="spam">Spam</option>
+          <option value="harassment">Harassment or bullying</option>
+          <option value="nsfw">Sexual or graphic content</option>
+          <option value="illegal">Something illegal</option>
+          <option value="other">Something else</option>
+        </select>
+      </label>
+      <label class="field"><span>Anything to add? (optional)</span><textarea id="rp-note" maxlength="300" rows="3"></textarea></label>
+      <p id="rp-private-note" class="hint is-hidden">This chat is encrypted, so moderators can't see it. They'll only see the message if you share it below.</p>
+      <label id="rp-share-row" class="check is-hidden"><input id="rp-share" type="checkbox" /><span>Share this message's text with the moderators</span></label>
+      <div id="rp-msg" class="alert is-hidden" role="alert"></div>
+      <div class="btn-row">
+        <button class="btn" data-close type="button">Cancel</button>
+        <button class="btn btn-solid" type="submit"><span class="btn-text">Send report</span><span class="btn-spin" aria-hidden="true"></span></button>
+      </div>
+    </form>
   </div>
 
   <!-- confirm -->
@@ -474,18 +538,18 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/vendor/peerjs.min.js"></script>
-<script src="/js/settings.js?v=2.5"></script>
-<script src="/js/themes.js?v=2.5"></script>
-<script src="/js/crypto.js?v=2.5"></script>
-<script src="/js/keys.js?v=2.5"></script>
-<script src="/js/pow.js?v=2.5"></script>
-<script src="/js/api.js?v=2.5"></script>
-<script src="/js/translate.js?v=2.5"></script>
-<script src="/js/peer-session.js?v=2.5"></script>
-<script src="/js/net.js?v=2.5"></script>
-<script src="/js/ui.js?v=2.5"></script>
-<script src="/js/attach.js?v=2.5"></script>
-<script src="/js/emoji.js?v=2.5"></script>
-<script src="/js/main.js?v=2.5"></script>
+<script src="/js/settings.js?v=2.6"></script>
+<script src="/js/themes.js?v=2.6"></script>
+<script src="/js/crypto.js?v=2.6"></script>
+<script src="/js/keys.js?v=2.6"></script>
+<script src="/js/pow.js?v=2.6"></script>
+<script src="/js/api.js?v=2.6"></script>
+<script src="/js/translate.js?v=2.6"></script>
+<script src="/js/peer-session.js?v=2.6"></script>
+<script src="/js/net.js?v=2.6"></script>
+<script src="/js/ui.js?v=2.6"></script>
+<script src="/js/attach.js?v=2.6"></script>
+<script src="/js/emoji.js?v=2.6"></script>
+<script src="/js/main.js?v=2.6"></script>
 </body>
 </html>

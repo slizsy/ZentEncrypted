@@ -1,6 +1,8 @@
 // Built-in themes and the custom theme (shareable as a ZT1. code).
 const Themes = (() => {
   const PRESETS = {
+    azure:    { label: 'Azure',    bg: '#f4f7fb', panel: '#ffffff', ink: '#0b1526', accent: '#1570ef', hot: '#e5484d', radius: '12px', shadow: 'soft', mono: false, scan: false },
+    midnight: { label: 'Midnight', bg: '#060a12', panel: '#0c1422', ink: '#e6eefb', accent: '#2f8cff', hot: '#ff5c63', radius: '12px', shadow: 'soft', mono: false, scan: false },
     graphite: { label: 'Graphite', bg: '#161513', panel: '#1f1e1b', ink: '#e8e3d8', accent: '#e2b45c', hot: '#d4574e', radius: '3px',  shadow: 'hard', mono: false, scan: false },
     signal:   { label: 'Signal',   bg: '#0e0f0c', panel: '#171914', ink: '#ece8dc', accent: '#c6ff3d', hot: '#ff5c39', radius: '2px',  shadow: 'hard', mono: false, scan: false },
     paper:    { label: 'Paper',    bg: '#e9e2d0', panel: '#f6f1e3', ink: '#1c1b17', accent: '#e4402a', hot: '#1f4fd8', radius: '2px',  shadow: 'hard', mono: false, scan: false },
@@ -82,7 +84,7 @@ const Themes = (() => {
 
   /** Applies a theme by name ('signal', …, 'custom') to the page. */
   function apply(name) {
-    const t = name === 'custom' ? getCustom() : PRESETS[name] || PRESETS.graphite;
+    const t = name === 'custom' ? getCustom() : PRESETS[name] || PRESETS.azure;
     const root = document.documentElement;
     const set = (k, v) => root.style.setProperty(k, v);
     set('--bg', t.bg); set('--panel', t.panel); set('--ink', t.ink);
@@ -91,10 +93,11 @@ const Themes = (() => {
     set('--shadow', SHADOW_CSS[t.shadow][0]); set('--shadow-sm', SHADOW_CSS[t.shadow][1]);
     set('--name-l', isDark(t.bg) ? '70%' : '36%');
     set('--grain', isDark(t.bg) ? '0.07' : '0.10');
-    root.dataset.theme = name in PRESETS || name === 'custom' ? name : 'graphite';
+    root.dataset.theme = name in PRESETS || name === 'custom' ? name : 'azure';
     root.dataset.scan = t.scan ? '1' : '0';
     root.dataset.mono = t.mono ? '1' : '0';
     root.style.colorScheme = isDark(t.bg) ? 'dark' : 'light';
+    root.dataset.dark = isDark(t.bg) ? '1' : '0';
     const meta = document.getElementById('meta-theme');
     if (meta) meta.setAttribute('content', t.bg);
     return t;

@@ -8,7 +8,6 @@ const { boot, client, connect, once, ack, sleep, fakeAuth, fakeLocator } = requi
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 const GIF = Buffer.from('R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==', 'base64');
-const ADMIN_PASSWORD = 'correct horse battery staple 9';
 
 let srv, giphy, giphyHits = [], ipN = 0;
 const sockets = [];
@@ -84,7 +83,6 @@ test.before(async () => {
   srv = await boot({
     SHIELD_AUTH_SOFT: '200',
     GIPHY_API_KEY: 'test-giphy-key', GIPHY_API_BASE: g, GIPHY_MEDIA_BASE: g,
-    ADMIN_PASSWORD,
     UPLOAD_MAX_MB: '1',
     HISTORY_COMPACT_MS: '50',
   });
@@ -406,45 +404,16 @@ test('profiles: signed-in people see any profile; the internet only sees public 
   assert.match(pageRes.headers.get('content-type'), /html/);
 });
 
-/* =================================== admin =================================== */
-
-test('admin: password required; stats are counts only; signing out works', async () => {
-  const c = client(srv.base, nextIp());
-  assert.strictEqual((await c.req('GET', '/api/admin/stats')).status, 401);
-  assert.strictEqual((await c.req('POST', '/api/admin/login', { password: 'nope' })).status, 401);
-  const ok = await fetch(srv.base + '/api/admin/login', { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': nextIp() }, body: JSON.stringify({ password: ADMIN_PASSWORD }) });
-  assert.strictEqual(ok.status, 200);
-  const raw = ok.headers.getSetCookie().find((x) => x.startsWith('zadmin=')) || '';
-  assert.match(raw, /HttpOnly/i);
-  assert.match(raw, /SameSite=Strict/i);
-  assert.match(raw, /Path=\/api\/admin/);
-  const cookie = raw.split(';')[0];
-  const r = await fetch(srv.base + '/api/admin/stats', { headers: { cookie } });
-  assert.strictEqual(r.status, 200);
-  const s = await r.json();
-  assert.ok(s.people.online >= 1, 'counts people online');
-  assert.ok(s.accounts.total >= 5);
-  assert.strictEqual(s.days.length, 14);
-  assert.ok(s.days.at(-1).pub >= 1 && s.days.at(-1).dm >= 1 && s.days.at(-1).room >= 1, 'messages counted by type today');
-  assert.ok(s.stored.files >= 1 && s.stored.fileCap > 0);
-  assert.ok(Number.isFinite(s.server.rssMB));
-  const text = JSON.stringify(s);
-  for (const leak of ['profilea', 'editora', 'teh plan', 'the plan', 'Guest', '10.30.']) assert.ok(!text.includes(leak), 'stats leaked ' + leak);
-
-  // a normal user session cookie is not an admin session
-  const g = await guest();
-  assert.strictEqual((await fetch(srv.base + '/api/admin/stats', { headers: { cookie: g.c.cookie } })).status, 401);
-  const out = await fetch(srv.base + '/api/admin/logout', { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: '{}' });
-  assert.match(out.headers.get('set-cookie'), /zadmin=;/);
-  assert.strictEqual((await fetch(srv.base + '/admin')).status, 200);
-});
-
-test('admin: guessing gets rate limited', async () => {
-  const c = client(srv.base, nextIp());
-  let limited = false;
-  for (let i = 0; i < 12; i++) {
-    const r = await c.req('POST', '/api/admin/login', { password: 'guess' + i });
-    if (r.status === 429 || r.status === 428) { limited = true; break; }
-  }
-  assert.ok(limited, 'repeated wrong passwords get blocked');
+test('GIF picker: thumbnails load, and many people asking for the same GIF at once cause one download', async () => {
+  const a = await guest();
+  await a.c.req('GET', '/api/gifs/search?q=cat');
+  const before = giphyHits.filter((u) => u === '/learned/catGif123.gif?cid=1').length;
+  const cookie = a.c.cookie;
+  const many = await Promise.all(Array.from({ length: 10 }, () => fetch(srv.base + '/gif/catGif123.gif?s=1', { headers: { cookie } })));
+  assert.ok(many.every((r) => r.status === 200));
+  const after = giphyHits.filter((u) => u === '/learned/catGif123.gif?cid=1').length;
+  assert.strictEqual(after - before, 1, 'fetched from giphy once, not ten times');
+  const again = await fetch(srv.base + '/gif/catGif123.gif?s=1', { headers: { cookie } });
+  assert.strictEqual(again.status, 200);
+  assert.strictEqual(giphyHits.filter((u) => u === '/learned/catGif123.gif?cid=1').length, after, 'second time comes from cache');
 });

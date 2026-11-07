@@ -38,6 +38,10 @@ const Net = (() => {
     on('message:deleted', 'onDeleted');
     on('dm:edited', 'onDmEdited');
     on('dm:deleted', 'onDmDeleted');
+    on('staff:settings', 'onStaffSettings');
+    on('staff:notice', 'onStaffNotice');
+    on('staff:me', 'onStaffMe');
+    on('staff:reports', 'onStaffReports');
     return socket;
   }
 

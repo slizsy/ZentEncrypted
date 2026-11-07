@@ -42,13 +42,21 @@ function signToken(user) {
 }
 
 // `secure` follows the real protocol, so plain-http LAN access still signs in.
+// Inside another site's frame (the page sends X-Zent-Embed), a Lax cookie is never sent, so that sign-in gets a
+// Partitioned one instead: it only exists under the embedding site and can't be used by any other site.
+// Cross-site requests are still refused by the Sec-Fetch-Site / Origin checks in server.js.
+const isEmbedded = (req) => req.get('x-zent-embed') === '1';
+const cookieOpts = (req) => isEmbedded(req)
+  ? { httpOnly: true, sameSite: 'none', secure: true, partitioned: true }
+  : { httpOnly: true, sameSite: 'lax', secure: !!req.secure };
+
 function setCookie(req, res, token, remember = true, maxAgeMs = REMEMBER_MS) {
-  const opts = { httpOnly: true, sameSite: 'lax', secure: !!req.secure };
+  const opts = cookieOpts(req);
   if (remember) opts.maxAge = maxAgeMs;
   res.cookie('token', token, opts);
 }
 
-const clearCookie = (req, res) => res.clearCookie('token', { httpOnly: true, sameSite: 'lax', secure: !!req.secure });
+const clearCookie = (req, res) => res.clearCookie('token', cookieOpts(req));
 
 // The one place a cookie becomes a session. Used by HTTP routes and sockets.
 function sessionFromCookie(header) {
@@ -59,6 +67,7 @@ function sessionFromCookie(header) {
   if (claims.role === 'guest') return guestRegistry.get(claims.sub) ? claims : null;
   const user = findUser(claims.sub);
   if (!user || (user.tokenVersion || 0) !== (claims.tv || 0)) return null; // revoked by a password change / sign-out-everywhere
+  if (user.banned) return null; // banned by staff: every session stops working at once
   return claims;
 }
 
@@ -96,6 +105,7 @@ router.post('/register', shield.guard(), registerLimiter, async (req, res) => {
     };
     if (findByName(username)) return res.status(409).json({ error: 'That username is taken.' }); // lost a race during hashing
     db.get('users').push(user).write();
+    bus.emit('user:registered', { id: user.id }); // the very first account on a fresh install becomes the owner
     setCookie(req, res, signToken(user), remember !== false);
     res.status(201).json({ id: user.id, username: user.username, role: 'registered' });
   } catch (err) {
@@ -116,6 +126,7 @@ router.post('/login', shield.guard({ account: accountName }), loginLimiter, asyn
       return res.status(401).json({ error: 'Wrong username or password.' });
     }
     shield.noteSuccess(req, name);
+    if (user.banned) return res.status(403).json({ error: 'This account is banned.' + (user.banned.reason ? ' Reason: ' + user.banned.reason : '') });
 
     const patch = {};
     if (passwords.needsUpgrade(user.passwordHash)) patch.passwordHash = await passwords.hash(password); // move old bcrypt hashes to scrypt

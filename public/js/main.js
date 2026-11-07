@@ -3,7 +3,7 @@
   const { $, h } = Ui;
   const PUBLIC = 'public';
   const P2P = 'p2p';
-  const SITE_TITLE = 'ZENT — sealed chat';
+  const SITE_TITLE = 'ZentEncrypted';
   const ROOMS_KEY = 'zent_rooms';
 
   const state = {
@@ -29,6 +29,7 @@
     editing: null, // { key, id, att } while you're fixing a message
     uploading: false,
     profile: null, // my own profile (members)
+    staff: { rank: 'guest', can: {}, settings: { slowModeSec: 0, publicPosting: 'all', announcement: '' } },
   };
 
   // owners: message id -> sender uid, so an edit/delete is only applied if it comes from whoever sent it
@@ -274,7 +275,7 @@
       store.set('sessionStorage', 'zent_booted', '1');
       const el = $('boot');
       const out = $('boot-text');
-      const lines = ['ZENT//SIGNAL  v2', 'gathering entropy ........ ok', 'sealing the room .......... ok', 'private logs .............. none', 'ready.'];
+      const lines = ['ZentEncrypted', 'gathering entropy ........ ok', 'sealing the room .......... ok', 'private logs .............. none', 'ready.'];
       const text = lines.join('\n');
       el.classList.add('is-on');
       let i = 0;
@@ -322,6 +323,8 @@
     const login = which === 'login';
     $('tab-login').classList.toggle('is-active', login);
     $('tab-register').classList.toggle('is-active', !login);
+    $('ticket-title').textContent = login ? 'Welcome back' : 'Join ZentEncrypted';
+    $('ticket-sub').textContent = login ? 'Sign in to pick up where you left off.' : 'No email needed. Just a name and a password.';
     $('login-form').classList.toggle('is-hidden', !login);
     $('register-form').classList.toggle('is-hidden', login);
     $('auth-error').classList.add('is-hidden');
@@ -476,6 +479,10 @@
       onDeleted: (e) => e && enqueueJob(e.room, () => applyDelete(e)),
       onDmEdited: (e) => e && dmJob(e.c, () => applyDmEdit(e)),
       onDmDeleted: (e) => e && dmJob(e.c, () => applyDmDelete(e)),
+      onStaffSettings: (s) => { if (s && typeof s === 'object') { state.staff.settings = s; showAnnouncement(); updateComposer(); } },
+      onStaffNotice: (n) => { if (n && n.text) Ui.toast(n.text, n.kicked ? 'error' : undefined); },
+      onStaffMe: () => loadStaff(),
+      onStaffReports: () => { if (state.staff.can.moderate) { Ui.toast('New report waiting in the staff panel.'); loadStaff(); } },
     });
   }
 
@@ -486,6 +493,10 @@
 
   async function onReady(data) {
     state.me.uid = data.uid;
+    if (data.settings) state.staff.settings = data.settings;
+    if (data.rank) state.staff.rank = data.rank;
+    showAnnouncement();
+    loadStaff();
     state.history = data.publicHistory || { enabled: false, days: 0 };
     const first = !state.ready;
     state.ready = true;
@@ -508,7 +519,7 @@
   }
 
   /* ---- public room history (saved on the server; private chats never are) ---- */
-  const toRow = (m) => ({ id: m.id, n: m.n, uid: m.uid, sender: m.sender, text: m.text, ts: m.ts, own: m.uid === state.me.uid, att: m.att, edited: m.edited });
+  const toRow = (m) => ({ id: m.id, n: m.n, uid: m.uid, sender: m.sender, text: m.text, ts: m.ts, own: m.uid === state.me.uid, att: m.att, edited: m.edited, rank: m.rank });
 
   function renderPublic(keepScroll) {
     const el = Ui.getLog(PUBLIC).el;
@@ -613,6 +624,7 @@
     state.current = key;
     r.unread = 0;
     Ui.showLog(key);
+    showAnnouncement();
     Ui.setTyping(null);
     updateHeader();
     renderRooms();
@@ -655,7 +667,14 @@
     let ph = 'Say something…';
     let max = 1000;
     if (!r) enabled = false;
-    else if (r.type === 'public') ph = state.history.enabled ? 'Message #public · saved' : 'Message #public';
+    else if (r.type === 'public') {
+      const st = state.staff;
+      const isStaff = !!st.can.moderate;
+      ph = state.history.enabled ? 'Message #public · saved' : 'Message #public';
+      if (!isStaff && st.settings.publicPosting === 'staff') { enabled = false; ph = '#public is read-only right now'; }
+      else if (!isStaff && st.settings.publicPosting === 'members' && state.me.role === 'guest') { enabled = false; ph = 'Only accounts can post in #public right now'; }
+      else if (!isStaff && st.settings.slowModeSec > 0) ph += ` · slow mode ${st.settings.slowModeSec}s`;
+    }
     else if (r.type === 'code') { ph = `Message #${r.name}`; max = 1500; }
     else if (r.type === 'dm') {
       max = 1500;
@@ -1263,7 +1282,7 @@
       if (!state.historyReady) { state.pendingPublic.push(msg); return; } // wait for history so order is right
       if (state.publicSeen.has(msg.id)) return;
       state.publicSeen.add(msg.id);
-      state.publicMsgs.push({ id: msg.id, n: msg.n, uid: msg.uid, sender: msg.sender, text: msg.text, ts: msg.ts, att: cleanAtt(msg.att) });
+      state.publicMsgs.push({ id: msg.id, n: msg.n, uid: msg.uid, sender: msg.sender, text: msg.text, ts: msg.ts, att: cleanAtt(msg.att), rank: msg.rank });
       if (state.publicMsgs.length > 3000) state.publicMsgs.shift();
     }
     room.owners.set(msg.id, msg.uid);
@@ -1277,7 +1296,8 @@
       if (plain === null) { failed = true; text = 'Could not decrypt this message.'; att = undefined; }
       else ({ text, att } = unpack(plain));
     }
-    const nodes = Ui.addMessage(room.key, { id: msg.id, uid: msg.uid, sender: msg.sender, text, ts: msg.ts, own, failed, att }, { hour24: Settings.get('hour24') });
+    const rank = ['owner', 'admin', 'mod'].includes(msg.rank) ? msg.rank : undefined;
+    const nodes = Ui.addMessage(room.key, { id: msg.id, uid: msg.uid, sender: msg.sender, text, ts: msg.ts, own, failed, att, rank }, { hour24: Settings.get('hour24') });
     clearTyping(room.key, msg.uid);
 
     if (!own) {
@@ -1307,10 +1327,18 @@
     }
   }
 
-  function applyDelete({ room: key, id, uid }) {
+  function applyDelete({ room: key, id, uid, by }) {
     const room = state.rooms.get(key);
     if (!room || typeof id !== 'string') return;
     const owner = room.owners.get(id);
+    if (by === 'staff' && room.type === 'public') { // a moderator removed it (the server only says that for staff)
+      const i = state.publicMsgs.findIndex((m) => m.id === id);
+      if (i >= 0) state.publicMsgs.splice(i, 1);
+      room.owners.delete(id);
+      Ui.removeMessage(key, id);
+      if (state.editing && state.editing.id === id) cancelEdit();
+      return;
+    }
     if (owner && owner !== uid) return;
     if (room.type === 'public') {
       const i = state.publicMsgs.findIndex((m) => m.id === id);
@@ -1651,17 +1679,40 @@
     for (const g of res.results) {
       const b = h('button', { type: 'button', class: 'gif-pick', title: g.title || 'GIF', 'aria-label': g.title || 'GIF', on: { click: () => sendGif(g) } });
       if (g.w && g.h) b.style.setProperty('--ar', `${g.w} / ${g.h}`);
-      b.append(h('img', { src: `/gif/${g.id}.gif`, alt: '', loading: 'lazy', decoding: 'async' }));
+      const img = h('img', { src: `/gif/${g.id}.gif?s=1`, alt: '', loading: 'lazy', decoding: 'async' });
+      img.addEventListener('error', () => b.remove()); // no broken-image icons in the grid
+      b.append(img);
       grid.append(b);
     }
   }
 
   function bindTools() {
-    Ui.hooks.action = (key, id, what) => (what === 'edit' ? startEdit(key, id) : deleteMsg(key, id));
+    Ui.hooks.action = (key, id, what) => {
+      if (what === 'edit') return startEdit(key, id);
+      if (what === 'delete') return deleteMsg(key, id);
+      if (what === 'report') return openReport(key, id);
+      if (what === 'remove') return removeAsStaff(key, id);
+    };
+    Ui.hooks.actionsFor = (key, m) => {
+      const r = state.rooms.get(key);
+      if (!r || r.type === 'p2p') return [];
+      if (m.own) {
+        const list = [];
+        if (!(m.att && m.att.t === 'gif')) list.push({ what: 'edit', label: 'Edit' });
+        list.push({ what: 'delete', label: 'Delete', danger: true });
+        return list;
+      }
+      const list = [{ what: 'report', label: 'Report' }];
+      if (r.type === 'public' && state.staff.can.moderate) list.push({ what: 'remove', label: 'Remove', danger: true });
+      return list;
+    };
     Ui.hooks.name = (m) => openProfile(m.own ? state.me.username : m.sender);
     Ui.hooks.att = renderAtt;
 
     $('edit-cancel').addEventListener('click', cancelEdit);
+    $('rp-form').addEventListener('submit', sendReport);
+    $('open-staff').addEventListener('click', () => window.open('/admin', '_blank', 'noopener'));
+    $('announce-close').addEventListener('click', () => $('announce').classList.add('is-hidden'));
     $('media-save').addEventListener('click', saveMedia);
     $('dlg-media').addEventListener('modal:closed', () => { $('media-img').removeAttribute('src'); mediaAtt = null; });
 
@@ -1760,6 +1811,7 @@
     $('pf-links').textContent = '';
     $('pf-meta').textContent = '';
     $('pf-page').classList.add('is-hidden');
+    $('pf-staff').classList.add('is-hidden');
     Ui.openModal('dlg-profile');
     let p;
     try {
@@ -1767,6 +1819,7 @@
     } catch (e) {
       card.classList.add('is-guest');
       $('pf-bio').textContent = e.message || "Couldn't load that profile.";
+      staffActionsFor(name); // guests can still be muted or kicked
       return;
     }
     if (p.accent) card.style.setProperty('--pf-accent', p.accent);
@@ -1785,6 +1838,7 @@
     $('pf-meta').textContent = sinceText(p.memberSince);
     $('pf-page').href = '/u/' + encodeURIComponent(p.username);
     $('pf-page').classList.remove('is-hidden');
+    staffActionsFor(p.username);
   }
 
   /* ---- my profile editor (Settings > Profile) ---- */
@@ -1885,6 +1939,128 @@
     });
     // tap your own name/picture in the corner to see your profile
     document.querySelector('.rail-foot .me').addEventListener('click', () => { if (state.me) openProfile(state.me.username); });
+  }
+
+  /* =====================================================================
+   *  staff: badges, reports, moderator tools
+   * ===================================================================== */
+  async function loadStaff() {
+    try {
+      const s = await Api.call('/api/staff/me');
+      state.staff = { rank: s.rank, can: s.can || {}, settings: s.settings || state.staff.settings, openReports: s.openReports || 0 };
+    } catch { /* offline */ }
+    $('open-staff').classList.toggle('is-hidden', !state.staff.can.moderate);
+    const roleName = { owner: 'Owner', admin: 'Admin', mod: 'Moderator' }[state.staff.rank];
+    if (roleName && state.me && state.me.role !== 'guest') $('me-role').textContent = roleName;
+    const n = state.staff.openReports || 0;
+    $('staff-badge').textContent = n > 99 ? '99+' : String(n);
+    $('staff-badge').classList.toggle('is-hidden', !n);
+    showAnnouncement();
+    updateComposer();
+  }
+
+  function showAnnouncement() {
+    const text = (state.staff.settings && state.staff.settings.announcement) || '';
+    $('announce-text').textContent = text;
+    $('announce').classList.toggle('is-hidden', !text || state.current !== PUBLIC);
+  }
+
+  let reportTarget = null;
+  function openReport(key, id) {
+    const r = state.rooms.get(key);
+    const m = Ui.getMessage(key, id);
+    if (!r || !m || m.own) return;
+    reportTarget = { key, id, type: r.type, m };
+    $('rp-who').textContent = m.sender;
+    $('rp-note').value = '';
+    $('rp-reason').value = 'spam';
+    const priv = r.type !== 'public';
+    $('rp-share-row').classList.toggle('is-hidden', !priv || !m.text);
+    $('rp-share').checked = false;
+    $('rp-private-note').classList.toggle('is-hidden', !priv);
+    $('rp-msg').classList.add('is-hidden');
+    Ui.openModal('dlg-report');
+  }
+
+  async function sendReport(e) {
+    e.preventDefault();
+    const t = reportTarget;
+    if (!t) return;
+    const btn = e.target.querySelector('button[type=submit]');
+    busy(btn, true);
+    try {
+      const body = { reason: $('rp-reason').value, note: $('rp-note').value };
+      if (t.type === 'public') Object.assign(body, { kind: 'public', msgId: t.id });
+      else if (t.type === 'dm') {
+        const r = state.rooms.get(t.key);
+        Object.assign(body, { kind: 'dm', target: r.peerName, msgId: t.id, ts: t.m.ts });
+      } else Object.assign(body, { kind: 'room', uid: t.m.uid, msgId: t.id, ts: t.m.ts });
+      // private chats: the text only leaves your device if you tick the box
+      if (t.type !== 'public' && $('rp-share').checked && t.m.text) body.text = t.m.text;
+      await Api.call('/api/staff/report', 'POST', body);
+      Ui.closeModal('dlg-report');
+      Ui.toast('Thanks. The moderators will take a look.');
+    } catch (err) {
+      $('rp-msg').textContent = err.message;
+      $('rp-msg').classList.remove('is-hidden');
+    } finally {
+      busy(btn, false);
+    }
+  }
+
+  async function removeAsStaff(key, id) {
+    const m = Ui.getMessage(key, id);
+    if (!m) return;
+    if (!(await Ui.confirmBox({ title: `Remove ${m.sender}'s message?`, text: 'It disappears for everyone. This is logged.', ok: 'Remove' }))) return;
+    const res = await Net.deleteMsg({ room: key, id });
+    if (!res.ok) Ui.toast(res.error || "Couldn't remove that.", 'error');
+  }
+
+  /** moderator buttons inside someone's profile popup */
+  async function staffActionsFor(name) {
+    const box = $('pf-staff');
+    box.textContent = '';
+    box.classList.add('is-hidden');
+    if (!state.staff.can.moderate || !name || name === state.me.username) return;
+    let person;
+    try { ({ person } = await Api.call('/api/staff/lookup?name=' + encodeURIComponent(name))); } catch { return; }
+    const lvl = { guest: 0, member: 1, mod: 2, admin: 3, owner: 4 };
+    if (lvl[person.rank] >= lvl[state.staff.rank]) return; // can't act on equal/higher roles
+    const act = async (path, body, okText) => {
+      try { await Api.call(`/api/staff/users/${encodeURIComponent(person.id)}/${path}`, 'POST', body || {}); Ui.toast(okText); Ui.closeModal('dlg-profile'); }
+      catch (e) { Ui.toast(e.message, 'error'); }
+    };
+    const b = (label, fn2, danger) => h('button', { type: 'button', class: 'btn btn-sm' + (danger ? ' btn-danger' : ''), text: label, on: { click: fn2 } });
+    box.append(h('div', { class: 'pf-staff-title', text: 'Moderator tools' }));
+    const row = h('div', { class: 'pf-staff-row' });
+    if (person.mutedUntil) row.append(b('Unmute', () => act('unmute', null, `${person.username} can talk again.`)));
+    else {
+      row.append(b('Mute 10m', () => act('mute', { minutes: 10 }, `${person.username} is muted for 10 minutes.`)));
+      row.append(b('Mute 1h', () => act('mute', { minutes: 60 }, `${person.username} is muted for an hour.`)));
+      row.append(b('Mute 24h', () => act('mute', { minutes: 1440 }, `${person.username} is muted for a day.`)));
+    }
+    row.append(b('Kick', async () => {
+      if (await Ui.confirmBox({ title: `Kick ${person.username}?`, text: person.guest ? 'Their guest session ends.' : "They're disconnected and can come back.", ok: 'Kick' })) act('kick', null, `${person.username} was kicked.`);
+    }, true));
+    if (state.staff.can.ban) {
+      row.append(b('Ban', async () => {
+        if (!(await Ui.confirmBox({ title: `Ban ${person.username}?`, text: person.guest ? 'Their session ends and their network is blocked from guest access for 24 hours.' : "They're signed out everywhere and can't sign back in until unbanned.", ok: 'Ban' }))) return;
+        act('ban', { reason: '' }, `${person.username} is banned.`);
+      }, true));
+    }
+    box.append(row);
+    if (!person.guest && state.staff.can.roles) {
+      const sel = h('select', { class: 'select select-sm', 'aria-label': 'Role' });
+      const options = state.staff.can.owner ? ['member', 'mod', 'admin'] : ['member', 'mod'];
+      for (const o of options) sel.append(h('option', { value: o, text: o === 'mod' ? 'Moderator' : o.charAt(0).toUpperCase() + o.slice(1), selected: person.rank === o ? 'selected' : null }));
+      sel.value = person.rank;
+      const save = b('Set role', async () => {
+        try { await Api.call(`/api/staff/users/${encodeURIComponent(person.id)}/rank`, 'POST', { rank: sel.value }); Ui.toast(`${person.username} is now ${sel.value === 'mod' ? 'a moderator' : sel.value === 'admin' ? 'an admin' : 'a member'}.`); }
+        catch (e) { Ui.toast(e.message, 'error'); }
+      });
+      box.append(h('div', { class: 'pf-staff-row' }, sel, save));
+    }
+    box.classList.remove('is-hidden');
   }
 
   /* ---- typing indicator ---- */

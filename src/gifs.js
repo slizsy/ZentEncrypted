@@ -15,7 +15,9 @@ const CACHE_BYTES = 40 * 1024 * 1024;
 const enabled = () => !!KEY;
 
 // where giphy said each gif lives (learned from search results). fallback is the standard url pattern.
-const known = new Map();
+// two sizes: small thumbnails for the picker grid, full size for the chat.
+const known = new Map(); // id -> { full, small }
+const inFlight = new Map(); // `${id}|${size}` -> promise, so one gif is fetched once even if 20 people ask at once
 const mediaHost = (() => { try { return new URL(MEDIA).hostname; } catch { return ''; } })();
 function okMediaUrl(u) {
   try {
@@ -24,20 +26,20 @@ function okMediaUrl(u) {
     return url.protocol === 'https:' && /^(media\d*|i)\.giphy\.com$/.test(url.hostname);
   } catch { return false; }
 }
-function remember(gid, u) {
-  if (!okMediaUrl(u)) return;
-  known.set(gid, u);
+function remember(gid, full, small) {
+  if (!okMediaUrl(full)) return;
+  known.set(gid, { full, small: small && okMediaUrl(small) ? small : full });
   if (known.size > 5000) known.delete(known.keys().next().value);
 }
 
 // small in-memory caches: search results (5 min) and gif bytes (LRU, ~40 MB)
 const searches = new Map();
-const bytes = new Map(); // id -> Buffer (Map keeps insertion order = LRU order)
+const bytes = new Map(); // `${id}|${size}` -> Buffer (Map keeps insertion order = LRU order)
 let cached = 0;
-function cachePut(gid, buf) {
+function cachePut(key, buf) {
   if (buf.length > MAX_GIF_BYTES) return;
-  if (bytes.has(gid)) { cached -= bytes.get(gid).length; bytes.delete(gid); }
-  bytes.set(gid, buf);
+  if (bytes.has(key)) { cached -= bytes.get(key).length; bytes.delete(key); }
+  bytes.set(key, buf);
   cached += buf.length;
   while (cached > CACHE_BYTES && bytes.size) {
     const [k, v] = bytes.entries().next().value;
@@ -82,7 +84,8 @@ router.get('/search', requireAuth, searchLimiter, async (req, res) => {
     if (!g || !GIF_ID.test(String(g.id))) continue;
     const fh = (g.images && g.images.fixed_height) || {};
     const w = toInt(fh.width), h = toInt(fh.height);
-    if (fh.url) remember(g.id, fh.url);
+    const small = (g.images && g.images.fixed_height_small) || {};
+    if (fh.url) remember(g.id, fh.url, small.url);
     results.push({ id: g.id, w: w || 200, h: h || 200, title: String(g.title || '').slice(0, 80) });
   }
   searches.set(cacheKey, { at: Date.now(), results });
@@ -92,12 +95,14 @@ router.get('/search', requireAuth, searchLimiter, async (req, res) => {
 
 const mediaLimiter = rateLimit({ windowMs: 60 * 1000, max: 240, standardHeaders: true, legacyHeaders: false, validate: false, keyGenerator: (req) => 'gifm:' + ((readSession(req) || {}).sub || 'anon'), message: 'Too many requests.' });
 
-/** GET /gif/:id.gif (outside /api so the browser can cache it) */
+/** GET /gif/:id.gif  (add ?s=1 for the small picker thumbnail). Outside /api so the browser can cache it. */
 async function media(req, res) {
   const gid = String(req.params.id || '');
   if (!GIF_ID.test(gid)) return res.status(404).end();
   if (!readSession(req)) return res.status(401).end();
   if (!enabled()) return res.status(404).end();
+  const size = req.query.s === '1' ? 'small' : 'full';
+  const key = gid + '|' + size;
   const send = (buf) => {
     res.set('Content-Type', 'image/gif');
     res.set('X-Content-Type-Options', 'nosniff');
@@ -105,13 +110,23 @@ async function media(req, res) {
     res.set('Cache-Control', 'private, max-age=86400');
     res.send(buf);
   };
-  const hit = bytes.get(gid);
-  if (hit) { bytes.delete(gid); bytes.set(gid, hit); return send(hit); } // bump to most-recent
+  const hit = bytes.get(key);
+  if (hit) { bytes.delete(key); bytes.set(key, hit); return send(hit); } // bump to most-recent
 
-  const urls = [known.get(gid), `${MEDIA}/media/${gid}/200.gif`].filter(Boolean);
+  if (!inFlight.has(key)) {
+    inFlight.set(key, fetchGif(gid, size).finally(() => inFlight.delete(key)));
+  }
+  const buf = await inFlight.get(key);
+  if (!buf) return res.status(404).end();
+  send(buf);
+}
+
+async function fetchGif(gid, size) {
+  const learned = known.get(gid);
+  const urls = [learned && learned[size], learned && learned.full, `${MEDIA}/media/${gid}/${size === 'small' ? '100w' : '200'}.gif`].filter(Boolean);
   for (const u of urls) {
     try {
-      const r = await fetchWithTimeout(u, 8000);
+      const r = await fetchWithTimeout(u, 6000);
       if (!r.ok || !okMediaUrl(r.url || u)) continue;
       const type = String(r.headers.get('content-type') || '');
       if (!/^image\/gif\b/.test(type)) continue;
@@ -119,11 +134,11 @@ async function media(req, res) {
       if (Number.isFinite(len) && len > MAX_GIF_BYTES) continue;
       const buf = Buffer.from(await r.arrayBuffer());
       if (buf.length > MAX_GIF_BYTES || buf.slice(0, 4).toString('latin1') !== 'GIF8') continue;
-      cachePut(gid, buf);
-      return send(buf);
+      cachePut(gid + '|' + size, buf);
+      return buf;
     } catch { /* try the next one */ }
   }
-  res.status(404).end();
+  return null;
 }
 
 module.exports = { router, media, mediaLimiter, enabled, GIF_ID };

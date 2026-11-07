@@ -15,7 +15,7 @@ test('health + security headers (no HSTS, strict CSP, no upgrade-insecure-reques
   assert.ok(csp.includes("script-src 'self'") && csp.includes("style-src 'self'"));
   assert.ok(!csp.includes('unsafe-inline'));
   assert.ok(!csp.includes('upgrade-insecure-requests'));
-  assert.ok(csp.includes("frame-ancestors 'none'"));
+  assert.ok(csp.includes("frame-ancestors 'self'") && !/frame-ancestors[^;]*\*/.test(csp)); // only named sites may frame us, never "any site"
 });
 
 test('register validation: reserved names, bad chars, short passwords, non-strings', async () => {
@@ -226,11 +226,13 @@ test('/api/config tells the page the secure address; private data files are not 
   assert.strictEqual(mode & 0o077, 0, 'db.json is private to the owner, mode ' + mode.toString(8));
 });
 
-test('admin page is off unless ADMIN_PASSWORD is set; uploads need a session', async () => {
-  const r = await fetch(srv.base + '/api/admin/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: '' }) });
-  assert.strictEqual(r.status, 404);
-  assert.strictEqual((await r.json()).off, true);
-  assert.strictEqual((await fetch(srv.base + '/api/admin/stats')).status, 404);
+test('staff tools need a staff role; uploads need a session', async () => {
+  const me = await (await fetch(srv.base + '/api/staff/me')).json();
+  assert.strictEqual(me.rank, 'guest');
+  assert.strictEqual(me.can.moderate, false);
+  assert.strictEqual((await fetch(srv.base + '/api/staff/users')).status, 401);
+  assert.strictEqual((await fetch(srv.base + '/api/staff/overview')).status, 401);
+  assert.strictEqual((await fetch(srv.base + '/api/admin/stats')).status, 404, 'the old password admin API is gone');
   const up = await fetch(srv.base + '/api/files', { method: 'POST', headers: { 'content-type': 'application/octet-stream', 'x-zent-scope': 'public' }, body: 'x' });
   assert.strictEqual(up.status, 401);
 });

@@ -20,6 +20,7 @@ const files = require('./src/files');
 const gifs = require('./src/gifs');
 const profiles = require('./src/profiles');
 const stats = require('./src/stats');
+const staff = require('./src/staff');
 
 const app = express();
 const server = http.createServer(app);
@@ -28,10 +29,14 @@ const server = http.createServer(app);
 // trusting only loopback keeps X-Forwarded-* spoof-proof from the LAN.
 app.set('trust proxy', 'loopback');
 
+// Sites allowed to show ZentEncrypted inside a frame (Fablehop). Comma-separated; set EMBED_ORIGINS= to allow none.
+const embedOrigins = (process.env.EMBED_ORIGINS ?? 'https://slizsy.github.io').split(',').map((s) => s.trim()).filter(Boolean);
+
 app.use(
   helmet({
     hsts: false, // TLS is handled by Cloudflare; Node may also be reached over plain http on the LAN
     crossOriginEmbedderPolicy: false,
+    xFrameOptions: false, // can't name another site; frame-ancestors below decides who may embed us
     contentSecurityPolicy: {
       useDefaults: false,
       directives: {
@@ -46,7 +51,7 @@ app.use(
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         formAction: ["'self'"],
-        frameAncestors: ["'none'"],
+        frameAncestors: ["'self'", ...embedOrigins],
       },
     },
   })
@@ -75,13 +80,14 @@ app.use('/api', (req, res, next) => {
   next();
 });
 app.get('/api/config', (req, res) => res.json({ publicUrl: process.env.PUBLIC_URL || null, gifs: gifs.enabled(), uploads: files.config() }));
+app.post('/api/auth/guest', staff.guestGate); // blocked networks can't start new guest sessions
 app.use('/api/auth', authRoutes);
 app.use('/api/friends', friendsRoutes);
 app.use('/api/keys', require('./src/keys'));
 app.use('/api/files', files.router);
 app.use('/api/gifs', gifs.router);
 app.use('/api/profiles', profiles.router);
-app.use('/api/admin', stats.router);
+app.use('/api/staff', staff.router);
 app.get('/health', (req, res) => res.json({ ok: true }));
 
 // uploaded files and GIFs live outside /api so the browser is allowed to cache them
@@ -167,6 +173,7 @@ try {
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || undefined; // set HOST=127.0.0.1 to accept connections only via the tunnel
 if (require.main === module) {
+  staff.ensureOwner();
   server.listen(PORT, HOST, () => {
     console.log(`ZentEncrypted listening on port ${PORT}`);
     if (shield.status().config.always) console.log('Shield: ALWAYS-ON human check is enabled.');

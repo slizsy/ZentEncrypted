@@ -12,6 +12,7 @@ const bus = require('./bus');
 const files = require('./files');
 const gifs = require('./gifs');
 const stats = require('./stats');
+const staff = require('./staff');
 const { cleanText } = require('./text');
 const { fromRequest, keyFor } = require('./clientIp');
 
@@ -22,8 +23,7 @@ const IDLE_TIMEOUT_MS = num(process.env.WS_IDLE_TIMEOUT_MS, 15 * 60 * 1000);
 const PUBLIC_MAX_CHARS = 1000;
 const CIPHER_MAX_CHARS = 7000;
 
-const uidFor = (userId) =>
-  crypto.createHmac('sha256', JWT_SECRET).update('uid:' + userId).digest('hex').slice(0, 10);
+const { uidFor } = require('./uid');
 
 const noop = () => {};
 const fn = (f) => (typeof f === 'function' ? f : noop);
@@ -74,10 +74,40 @@ function attach(io) {
   });
   const killConv = (c) => { dm.deleteConv(c); files.dropScope(c); };
 
+  // what staff tools need to know about who's connected
+  staff.setLive(() => {
+    const seen = new Map();
+    for (const s of io.sockets.sockets.values()) {
+      if (!s.user) continue;
+      seen.set(s.id, { id: s.user.id, username: s.user.username, role: s.user.role, uid: s.user.uid, netKey: s.netKey });
+    }
+    return Array.from(seen.values());
+  });
+  bus.on('staff:kick', ({ userId, reason }) => {
+    io.to(`u:${userId}`).emit('staff:notice', { text: reason, kicked: true });
+    setTimeout(() => io.in(`u:${userId}`).disconnectSockets(true), 300); // give the notice a moment to arrive
+  });
+  bus.on('staff:notice', ({ userId, text }) => io.to(`u:${userId}`).emit('staff:notice', { text }));
+  bus.on('staff:settings', (settings) => io.emit('staff:settings', settings));
+  bus.on('staff:rank', ({ userId }) => io.to(`u:${userId}`).emit('staff:me'));
+  bus.on('staff:report', () => {
+    for (const s of io.sockets.sockets.values()) if (s.user && s.user.role === 'registered' && staff.can(s.user.id, 'moderate')) s.emit('staff:reports');
+  });
+  bus.on('staff:purge', ({ ids, uid }) => {
+    for (const mid of ids) io.to(rooms.PUBLIC).emit('message:deleted', { room: rooms.PUBLIC, id: mid, uid, by: 'staff' });
+    files.dropMsgFiles(ids);
+  });
+  bus.on('staff:delete-account', ({ userId }) => {
+    for (const c of dm.conversations()) if (c.includes(userId)) killConv(c);
+    files.dropOwner(userId);
+  });
+
   // Cap connections per network. Rejecting during the handshake means the
   // browser gets an explicit connect_error instead of hanging.
   io.use((socket, next) => {
     const key = keyFor(fromRequest(socket.request));
+    socket.netKey = key;
+    if (socket.user && socket.user.role === 'guest' && staff.netBanned(key)) return next(new Error('Unauthorized'));
     if (!shield.connOpen(key)) return next(new Error('Too many connections'));
     socket.once('disconnect', () => shield.connClose(key));
     next();
@@ -142,7 +172,7 @@ function attach(io) {
 
     enter(socket, rooms.PUBLIC);
     if (sockets && sockets.size === 1) stats.notePeak(new Set(Array.from(io.sockets.sockets.values(), (x) => x.user && x.user.id)).size);
-    socket.emit('session:ready', { id: userId, uid, username, role, room: rooms.PUBLIC, publicHistory: history.info() });
+    socket.emit('session:ready', { id: userId, uid, username, role, rank: staff.rankOf(userId), room: rooms.PUBLIC, publicHistory: history.info(), settings: staff.publicSettings() });
 
     /* ---------- joining / creating ---------- */
     socket.on('room:create', (p, ack) => {
@@ -211,7 +241,11 @@ function attach(io) {
       if (!room) return ack({ ok: false, error: 'That room is gone.' });
 
       const msg = { id: crypto.randomBytes(6).toString('hex'), room: key, sender: username, uid, ts: Date.now() };
+      const rank = staff.badge(userId);
+      if (rank) msg.rank = rank;
       if (room.type === 'public') {
+        const blocked = staff.publicGate(userId, role);
+        if (blocked) return ack({ ok: false, error: blocked });
         const hasAtt = p.att !== undefined && p.att !== null;
         if (typeof p.text !== 'string' && !(hasAtt && p.text === undefined)) return ack({ ok: false, error: 'Malformed message.' });
         const text = cleanText(p.text || '');
@@ -235,6 +269,7 @@ function attach(io) {
         msg.text = text;
         const saved = history.append(msg); // public room only: encrypted rooms are never saved
         if (saved) msg.n = saved.n;
+        staff.notePost(userId);
         stats.count('pub');
       } else {
         const { ciphertext, iv } = p;
@@ -267,6 +302,7 @@ function attach(io) {
       const out = { room: key, id: p.id, uid, edited: Date.now() };
       if (room.type === 'public') {
         if (typeof p.text !== 'string') return ack({ ok: false, error: 'Malformed message.' });
+        if (staff.mutedUntil(userId)) return ack({ ok: false, error: "You're muted in #public right now." });
         const text = cleanText(p.text);
         if (text.length > PUBLIC_MAX_CHARS) return ack({ ok: false, error: `Max ${PUBLIC_MAX_CHARS} characters in public.` });
         if (history.info().enabled) {
@@ -296,10 +332,27 @@ function attach(io) {
       const room = rooms.get(key);
       if (!room) return ack({ ok: false, error: 'That room is gone.' });
       if (typeof p.id !== 'string' || !MSG_REF.test(p.id)) return ack({ ok: false, error: 'Bad request.' });
+      const asStaff = room.type === 'public' && staff.can(userId, 'moderate');
       if (room.type === 'public' && history.info().enabled) {
-        const rec = history.remove(p.id, uid);
+        let rec = history.remove(p.id, uid);
+        let by;
+        if (!rec && asStaff) {
+          const target = history.get(p.id);
+          const author = target ? staff.byUid(target.uid) : null;
+          const authorRank = author ? staff.rankOf(author.id) : 'guest';
+          if (target && staff.LEVEL[staff.rankOf(userId)] <= staff.LEVEL[authorRank]) {
+            return ack({ ok: false, error: "You can't remove messages from someone with the same or a higher role." });
+          }
+          rec = history.remove(p.id, null, true);
+          if (rec) { by = 'staff'; staff.audit(userId, 'delete-message', rec.sender, rec.text ? rec.text.slice(0, 120) : '(picture)'); }
+        }
         if (!rec) return ack({ ok: false, error: 'You can only delete your own messages.' });
-        if (rec.att && rec.att.t === 'img') files.removeOwn(rec.att.id, userId, 'public');
+        if (rec.att && rec.att.t === 'img') { const f = files.get(rec.att.id); if (f) files.removeOwn(rec.att.id, f.owner, 'public'); }
+        io.to(key).emit('message:deleted', { room: key, id: p.id, uid: rec.uid, ...(by ? { by } : {}) });
+        return ack({ ok: true });
+      } else if (asStaff && room.type === 'public') {
+        io.to(key).emit('message:deleted', { room: key, id: p.id, uid, by: 'staff' });
+        return ack({ ok: true });
       } else {
         // nothing saved here: also bin the encrypted files that message pointed at (yours only)
         for (const f of fileList(p.files)) files.removeOwn(f, userId, room.type === 'public' ? 'public' : key);

@@ -124,7 +124,8 @@ const Ui = (() => {
   const logs = new Map(); // key -> { el, lastUid, lastTs, stick, empty, byId }
   const MAX_ROWS = 400;
   // main.js plugs these in: what the edit/delete buttons do, what a name click does, how attachments draw
-  const hooks = { action: null, name: null, att: null };
+  const hooks = { action: null, name: null, att: null, actionsFor: null };
+  const RANK_LABEL = { owner: 'Owner', admin: 'Admin', mod: 'Mod' };
 
   function getLog(key) {
     let L = logs.get(key);
@@ -191,16 +192,22 @@ const Ui = (() => {
     const who = m.plainName || !hooks.name
       ? h('span', { class: 'msg-who', text: name })
       : h('button', { class: 'msg-who', type: 'button', text: name, title: 'View profile', on: { click: () => hooks.name(m) } });
-    const canAct = !!(m.own && m.id && !m.failed && hooks.action);
+    const avatar = h('span', { class: 'msg-av', 'aria-hidden': 'true', text: String(m.sender || '?').charAt(0).toUpperCase() });
+    const badge = m.rank && RANK_LABEL[m.rank] ? h('span', { class: 'msg-rank r-' + m.rank, text: RANK_LABEL[m.rank] }) : null;
+    // which buttons this message gets (edit/delete on yours; report/remove on others', decided by main.js)
+    const acts = !m.failed && m.id && hooks.action
+      ? (hooks.actionsFor ? hooks.actionsFor(key, m) : (m.own ? [{ what: 'edit', label: 'Edit' }, { what: 'delete', label: 'Delete', danger: true }] : []))
+      : [];
     const row = h(
       'div',
       {
-        class: 'msg' + (m.own ? ' is-own' : '') + (cont ? ' is-cont' : '') + (m.failed ? ' is-failed' : '') + (m.edited ? ' is-edited' : '') + (canAct ? ' has-actions' : '') + (animate ? '' : ' no-anim'),
+        class: 'msg' + (m.own ? ' is-own' : '') + (cont ? ' is-cont' : '') + (m.failed ? ' is-failed' : '') + (m.edited ? ' is-edited' : '') + (acts.length ? ' has-actions' : '') + (animate ? '' : ' no-anim'),
         vars: { '--h': String(hueOf(m.uid || m.sender)) },
         'data-id': m.id || null,
       },
-      h('time', { class: 'msg-time', datetime: new Date(m.ts).toISOString(), text: fmtTime(m.ts, hour24) }),
-      who,
+      avatar,
+      // name, role badge and time sit in their own row, so a wide picture below can't push them around
+      h('div', { class: 'msg-head' }, who, badge, h('time', { class: 'msg-time', datetime: new Date(m.ts).toISOString(), text: fmtTime(m.ts, hour24) })),
       body
     );
     let att = null;
@@ -208,11 +215,10 @@ const Ui = (() => {
       try { att = hooks.att(key, m); } catch { att = null; }
       if (att) row.append(att);
     }
-    if (canAct) {
+    if (acts.length) {
       const act = (what) => (e) => { e.stopPropagation(); row.classList.remove('is-picked'); hooks.action(key, m.id, what); };
       row.append(h('div', { class: 'msg-act', role: 'group', 'aria-label': 'Message actions' },
-        m.text !== undefined && !(m.att && m.att.t === 'gif') ? h('button', { type: 'button', text: 'Edit', on: { click: act('edit') } }) : null,
-        h('button', { type: 'button', class: 'is-danger', text: 'Delete', on: { click: act('delete') } })));
+        ...acts.map((a) => h('button', { type: 'button', class: a.danger ? 'is-danger' : null, text: a.label, on: { click: act(a.what) } }))));
     }
     if (m.id) L.byId.set(m.id, { row, body, m });
     pushRow(L, row, !!m.own);
@@ -258,7 +264,7 @@ const Ui = (() => {
     const rows = L.el.querySelectorAll('.msg.has-actions');
     for (let i = rows.length - 1; i >= 0; i--) {
       const f = L.byId.get(rows[i].dataset.id);
-      if (f && f.m.own && !(f.m.att && f.m.att.t === 'gif')) return f.m;
+      if (f && f.m.own && !f.m.failed && !(f.m.att && f.m.att.t === 'gif')) return f.m;
     }
     return null;
   }

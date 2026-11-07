@@ -1,73 +1,123 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="graphite">
+<html lang="en" data-theme="azure">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Admin · ZENT</title>
+<title>Staff · ZentEncrypted</title>
 <meta name="robots" content="noindex, nofollow" />
-<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-<link rel="preload" href="/fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="/css/base.css?v=2.5" />
-<link rel="stylesheet" href="/css/components.css?v=2.5" />
-<link rel="stylesheet" href="/css/admin.css?v=2.5" />
+<meta name="theme-color" content="#f4f7fb" id="meta-theme" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" href="/icons/favicon-32.png" type="image/png" sizes="32x32" />
+<link rel="stylesheet" href="/css/base.css?v=2.6" />
+<link rel="stylesheet" href="/css/components.css?v=2.6" />
+<link rel="stylesheet" href="/css/look.css?v=2.6" />
+<link rel="stylesheet" href="/css/admin.css?v=2.6" />
 </head>
 <body class="adm">
 <header class="adm-head">
-  <a class="adm-mark" href="/">ZENT<span class="wm-slash">//</span></a>
-  <span class="adm-title">admin</span>
-  <span id="adm-live" class="adm-live is-hidden"><span class="pulse"></span><span id="adm-updated">live</span></span>
-  <button id="adm-out" class="btn btn-sm-plain is-hidden" type="button">Sign out</button>
+  <a class="adm-brand" href="/"><img src="/icons/logo.png" alt="" width="30" height="30" /><span>ZentEncrypted</span></a>
+  <span class="adm-title">Staff</span>
+  <span id="adm-who" class="adm-who"></span>
+  <a class="btn btn-sm" href="/">Back to chat</a>
 </header>
 
-<main class="adm-main">
-  <section id="adm-off" class="adm-login is-hidden">
-    <h1>Admin page is off</h1>
-    <p class="hint">Add <code>ADMIN_PASSWORD=</code> with 12 or more characters to <code>.env</code>, then restart the server.</p>
-  </section>
+<div id="adm-gate" class="adm-gate is-hidden">
+  <img src="/icons/logo.png" alt="" width="64" height="64" />
+  <h1 id="gate-title">Staff only</h1>
+  <p id="gate-text">Sign in to ZentEncrypted with a staff account, then come back here.</p>
+  <a class="btn btn-solid" href="/">Go to sign in</a>
+</div>
 
-  <form id="adm-login" class="adm-login form is-hidden" autocomplete="on">
-    <h1>Admin</h1>
-    <p class="hint">Counts only. No messages, names or addresses are shown here.</p>
-    <input type="text" name="username" value="admin" autocomplete="username" hidden />
-    <label class="field"><span>Password</span><input id="adm-pw" type="password" autocomplete="current-password" required /></label>
-    <div id="adm-err" class="alert is-hidden" role="alert"></div>
-    <button class="btn btn-solid btn-block" type="submit"><span class="btn-text">Open dashboard</span><span class="btn-spin" aria-hidden="true"></span></button>
-  </form>
+<div id="adm-app" class="adm-app is-hidden">
+  <nav class="adm-nav" role="tablist" aria-label="Staff sections">
+    <button class="adm-tab" data-tab="overview" data-need="stats" type="button">Overview</button>
+    <button class="adm-tab" data-tab="reports" data-need="moderate" type="button">Reports <span id="nav-reports" class="badge is-hidden"></span></button>
+    <button class="adm-tab" data-tab="people" data-need="moderate" type="button">People</button>
+    <button class="adm-tab" data-tab="settings" data-need="settings" type="button">#public settings</button>
+    <button class="adm-tab" data-tab="audit" data-need="audit" type="button">Audit log</button>
+  </nav>
 
-  <div id="adm-dash" class="adm-dash is-hidden">
-    <section class="adm-big">
-      <div class="stat"><b id="s-online">0</b><span>online now</span><small id="s-online-sub"></small></div>
-      <div class="stat"><b id="s-msgs">0</b><span>messages today</span><small id="s-msgs-sub"></small></div>
-      <div class="stat"><b id="s-accounts">0</b><span>accounts</span><small id="s-accounts-sub"></small></div>
-      <div class="stat"><b id="s-rooms">0</b><span>private rooms open</span><small id="s-rooms-sub"></small></div>
+  <main class="adm-main">
+    <!-- overview -->
+    <section id="tab-overview" class="adm-pane is-hidden">
+      <div class="adm-big">
+        <div class="stat"><b id="s-online">0</b><span>online now</span><small id="s-online-sub"></small></div>
+        <div class="stat"><b id="s-msgs">0</b><span>messages today</span><small id="s-msgs-sub"></small></div>
+        <div class="stat"><b id="s-accounts">0</b><span>accounts</span><small id="s-accounts-sub"></small></div>
+        <div class="stat"><b id="s-mod">0</b><span>open reports</span><small id="s-mod-sub"></small></div>
+      </div>
+      <section class="adm-panel">
+        <h2>Last 14 days</h2>
+        <div class="legend"><span class="k k-pub">#public</span><span class="k k-room">private rooms</span><span class="k k-dm">friends</span></div>
+        <div id="adm-chart" class="chart" role="img" aria-label="Messages per day"></div>
+        <div id="adm-chart-x" class="chart-x"></div>
+      </section>
+      <div class="adm-cols">
+        <section class="adm-panel"><h2>Stored on the server</h2><dl class="kv" id="adm-stored"></dl><div class="meter"><i id="adm-disk-bar"></i></div><p class="hint" id="adm-files-line"></p></section>
+        <section class="adm-panel"><h2>The machine</h2><dl class="kv" id="adm-server"></dl></section>
+      </div>
+      <p class="hint">Counts only. Private rooms and friend chats are encrypted, so nobody here (not even the owner) can read them.</p>
     </section>
 
-    <section class="adm-panel adm-chart-panel">
-      <h2>Last 14 days</h2>
-      <div class="legend"><span class="k k-pub">#public</span><span class="k k-room">private rooms</span><span class="k k-dm">friends</span></div>
-      <div id="adm-chart" class="chart" role="img" aria-label="Messages per day"></div>
-      <div id="adm-chart-x" class="chart-x"></div>
+    <!-- reports -->
+    <section id="tab-reports" class="adm-pane is-hidden">
+      <div class="adm-bar">
+        <div class="segctl" role="tablist"><button id="rep-open" class="is-active" type="button">Open</button><button id="rep-done" type="button">Resolved</button></div>
+      </div>
+      <div id="rep-list" class="cards"></div>
     </section>
 
-    <div class="adm-cols">
-      <section class="adm-panel">
-        <h2>Stored on the server</h2>
-        <dl class="kv" id="adm-stored"></dl>
-        <div class="meter"><i id="adm-disk-bar"></i></div>
-        <p class="hint" id="adm-files-line"></p>
+    <!-- people -->
+    <section id="tab-people" class="adm-pane is-hidden">
+      <div class="adm-bar">
+        <input id="ppl-q" type="search" placeholder="Search by name" autocomplete="off" spellcheck="false" aria-label="Search people" />
+        <div class="segctl" role="tablist">
+          <button data-filter="" class="is-active" type="button">All</button>
+          <button data-filter="online" type="button">Online</button>
+          <button data-filter="staff" type="button">Staff</button>
+          <button data-filter="banned" type="button">Banned</button>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="ppl"><thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Joined</th><th></th></tr></thead><tbody id="ppl-rows"></tbody></table></div>
+      <section id="nb-sec" class="adm-panel is-hidden">
+        <h2>Blocked networks</h2>
+        <p class="hint">Banning a guest blocks their network from new guest sessions for 24 hours. Only a scrambled code is kept, never the address.</p>
+        <div id="nb-list"></div>
       </section>
-      <section class="adm-panel">
-        <h2>The machine</h2>
-        <dl class="kv" id="adm-server"></dl>
-      </section>
-    </div>
-  </div>
-</main>
+    </section>
 
-<script src="/js/settings.js?v=2.5"></script>
-<script src="/js/themes.js?v=2.5"></script>
-<script src="/js/pow.js?v=2.5"></script>
-<script src="/js/api.js?v=2.5"></script>
-<script src="/js/admin.js?v=2.5"></script>
+    <!-- settings -->
+    <section id="tab-settings" class="adm-pane is-hidden">
+      <form id="set-form" class="adm-panel form">
+        <h2>#public</h2>
+        <label class="field"><span>Who can post</span>
+          <select id="set-posting" class="select">
+            <option value="all">Everyone (guests too)</option>
+            <option value="members">Accounts only</option>
+            <option value="staff">Staff only (read-only for everyone else)</option>
+          </select>
+        </label>
+        <label class="field"><span>Slow mode: seconds between messages (0 = off)</span><input id="set-slow" type="number" min="0" max="600" step="1" /></label>
+        <label class="field"><span>Announcement banner (shown at the top of #public, empty = none)</span><input id="set-ann" type="text" maxlength="200" /></label>
+        <p class="hint">Staff are never slowed down or locked out. Changes apply to everyone right away.</p>
+        <div id="set-msg" class="alert is-hidden" role="alert"></div>
+        <div class="btn-row"><button class="btn btn-solid" type="submit">Save</button></div>
+      </form>
+    </section>
+
+    <!-- audit -->
+    <section id="tab-audit" class="adm-pane is-hidden">
+      <div class="table-wrap"><table class="ppl"><thead><tr><th>When</th><th>Who</th><th>Did</th><th>To</th><th>Details</th></tr></thead><tbody id="aud-rows"></tbody></table></div>
+    </section>
+  </main>
+</div>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<script src="/js/settings.js?v=2.6"></script>
+<script src="/js/themes.js?v=2.6"></script>
+<script src="/js/pow.js?v=2.6"></script>
+<script src="/js/api.js?v=2.6"></script>
+<script src="/js/admin.js?v=2.6"></script>
 </body>
 </html>

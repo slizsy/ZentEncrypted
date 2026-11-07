@@ -1,21 +1,11 @@
 // Counts for the admin page. Only numbers are kept here: never message text, names or IPs.
-// The admin page is off unless ADMIN_PASSWORD is set in .env (12+ characters).
+// Who may see them is decided by roles (src/staff.js).
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const crypto = require('crypto');
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const rateLimit = require('express-rate-limit');
-const { parse: parseCookies } = require('cookie');
 const db = require('../config/database');
-const shield = require('./shield');
-const { JWT_SECRET } = require('./auth');
-const { fromRequest, keyFor } = require('./clientIp');
 
 const KEEP_DAYS = 60;
-const ADMIN_PW = process.env.ADMIN_PASSWORD || '';
-const adminOn = () => ADMIN_PW.length >= 12;
 const started = Date.now();
 const version = require('../package.json').version;
 
@@ -139,55 +129,8 @@ function snapshot() {
   };
 }
 
-/* ---------------- admin login ---------------- */
-const COOKIE = 'zadmin';
-// changing ADMIN_PASSWORD in .env signs out every admin session
-const pwTag = () => crypto.createHash('sha256').update('zent-admin:' + ADMIN_PW).digest('hex').slice(0, 16);
-
-function isAdmin(req) {
-  if (!adminOn()) return false;
-  const token = parseCookies(req.headers.cookie || '')[COOKIE];
-  if (!token) return false;
-  try {
-    const c = jwt.verify(token, JWT_SECRET);
-    return c.role === 'admin' && c.tag === pwTag();
-  } catch { return false; }
-}
-
-const router = express.Router();
-router.use((req, res, next) => {
-  if (!adminOn()) return res.status(404).json({ error: 'The admin page is turned off. Set ADMIN_PASSWORD in .env to use it.', off: true });
-  next();
-});
-
-const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 8, standardHeaders: true, legacyHeaders: false, validate: false, keyGenerator: (req) => 'adm:' + keyFor(fromRequest(req)), message: { error: 'Too many tries. Wait 15 minutes.' } });
-
-router.post('/login', shield.guard({ account: () => 'admin' }), loginLimiter, (req, res) => {
-  const pw = req.body && typeof req.body.password === 'string' ? req.body.password : '';
-  const a = crypto.createHash('sha256').update(pw.slice(0, 500)).digest();
-  const b = crypto.createHash('sha256').update(ADMIN_PW).digest();
-  if (!crypto.timingSafeEqual(a, b)) {
-    shield.noteFail(req, 'admin');
-    return res.status(401).json({ error: 'Wrong password.' });
-  }
-  shield.noteSuccess(req, 'admin');
-  const token = jwt.sign({ role: 'admin', tag: pwTag() }, JWT_SECRET, { expiresIn: '12h' });
-  res.cookie(COOKIE, token, { httpOnly: true, sameSite: 'strict', secure: !!req.secure, path: '/api/admin', maxAge: 12 * 3600 * 1000 });
-  res.json({ ok: true });
-});
-
-router.post('/logout', (req, res) => {
-  res.clearCookie(COOKIE, { httpOnly: true, sameSite: 'strict', secure: !!req.secure, path: '/api/admin' });
-  res.json({ ok: true });
-});
-
-router.get('/stats', (req, res) => {
-  if (!isAdmin(req)) return res.status(401).json({ error: 'Sign in first.' });
-  res.json(snapshot());
-});
-
 module.exports = {
-  router, count, notePeak, snapshot, flush,
+  count, notePeak, snapshot, flush,
   setLive: (fn) => { live = fn; },
   setExtra: (fn) => { extra = fn; },
   close: () => { dirty = true; flush(); },

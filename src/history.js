@@ -136,10 +136,11 @@ function create(opts = {}) {
     return { loaded: msgs.length, skipped };
   }
 
-  function append({ id, ts, sender, uid, text, att }) {
+  function append({ id, ts, sender, uid, text, att, rank }) {
     if (!enabled) return null;
     const rec = { n: ++seq, id, ts, sender, uid, text };
     if (att) rec.att = att;
+    if (rank === 'owner' || rank === 'admin' || rank === 'mod') rec.rank = rank;
     msgs.push(rec);
     byId.set(id, rec);
     write(rec);
@@ -161,10 +162,10 @@ function create(opts = {}) {
     return rec;
   }
 
-  /** Deletes your own message. Returns the removed record, or null. */
-  function remove(id, uid) {
+  /** Deletes your own message (or anyone's, with force = staff). Returns the removed record, or null. */
+  function remove(id, uid, force = false) {
     const rec = byId.get(id);
-    if (!rec || rec.uid !== uid) return null;
+    if (!rec || (!force && rec.uid !== uid)) return null;
     let lo = 0, hi = msgs.length; // msgs is sorted by n
     while (lo < hi) { const mid = (lo + hi) >> 1; if (msgs[mid].n < rec.n) lo = mid + 1; else hi = mid; }
     if (msgs[lo] === rec) msgs.splice(lo, 1); else msgs = msgs.filter((m) => m !== rec);
@@ -238,7 +239,7 @@ module.exports = {
   append: (m) => store().append(m),
   get: (id) => store().get(id),
   edit: (id, uid, text) => store().edit(id, uid, text),
-  remove: (id, uid) => store().remove(id, uid),
+  remove: (id, uid, force) => store().remove(id, uid, force),
   page: (o) => store().page(o),
   purge: (fn) => store().purge(fn),
   info: () => store().info(),

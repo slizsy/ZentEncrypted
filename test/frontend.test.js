@@ -126,7 +126,11 @@ test('page loads clean: no script errors, sign-in screen shown, app hidden, icon
   assert.ok(a.$('app').classList.contains('is-hidden'));
   assert.strictEqual(a.document.querySelector('link[rel=manifest]').getAttribute('href'), '/manifest.webmanifest');
   assert.ok(a.document.querySelector('link[rel=apple-touch-icon]'));
-  assert.ok(a.document.querySelector('link[rel=icon][type="image/svg+xml"]'));
+  const png = a.document.querySelector('link[rel=icon][type="image/png"]');
+  assert.ok(png, 'Z logo favicon linked');
+  for (const href of [png.getAttribute('href'), '/favicon.ico', '/icons/apple-touch-icon.png', '/icons/icon-512.png', '/icons/logo.png']) {
+    assert.strictEqual((await fetch(srv.base + href)).status, 200, href + ' exists');
+  }
   const src = a.document.querySelector('#auth-screen a.src-link');
   assert.strictEqual(src.getAttribute('href'), 'https://github.com/slizsy/ZentEncrypted');
   assert.match(src.getAttribute('rel'), /noopener/);
@@ -170,7 +174,7 @@ test('two people in #public see each other; messages while you are elsewhere rai
   await sleep(1100); // stay under the 5 msg/s limiter
   await a.say('are you there?');
   await b.waitFor(() => b.visible(b.$('rooms-badge')) && b.$('rooms-badge').textContent === '1', 'unread badge');
-  assert.match(b.document.title, /^\(1\) ZENT/);
+  assert.strictEqual(b.document.title, '(1) ZentEncrypted');
   b.click(b.document.querySelector('#room-list .item')); // public is first
   await b.waitFor(() => b.$('room-title').textContent === 'public', 'back to public');
   assert.ok(!b.visible(b.$('rooms-badge')), 'badge cleared');
@@ -368,7 +372,8 @@ test('settings: themes switch, custom theme round-trips through a share code, to
   assert.ok(a.$('settings').classList.contains('is-open'));
 
   const swatches = a.document.querySelectorAll('#theme-grid .swatch');
-  assert.strictEqual(swatches.length, 9, '8 presets + custom');
+  assert.strictEqual(swatches.length, 11, '10 presets + custom');
+  assert.strictEqual(a.document.documentElement.dataset.theme, 'azure', 'new default look');
   const paper = Array.from(swatches).find((s) => /paper/i.test(s.textContent));
   a.click(paper);
   assert.strictEqual(a.document.documentElement.dataset.theme, 'paper');
@@ -588,7 +593,8 @@ test('edit + delete in #public: your own messages get Edit/Delete, others see th
   await b.waitFor(() => b.messages().includes('meet at 5'), 'B sees it');
   await a.waitFor(() => rowFor(a, 'meet at 5'), 'A sees it');
   assert.ok(rowFor(a, 'meet at 5').querySelector('.msg-act'), 'A has actions on their message');
-  assert.strictEqual(rowFor(b, 'meet at 5').querySelector('.msg-act'), null, "B can't edit A's message");
+  const bActs = Array.from(rowFor(b, 'meet at 5').querySelectorAll('.msg-act button')).map((x) => x.textContent);
+  assert.deepStrictEqual(bActs, ['Report'], "B can only report A's message, not edit or delete it");
 
   // A edits with the Edit button
   a.click(Array.from(rowFor(a, 'meet at 5').querySelectorAll('.msg-act button')).find((x) => x.textContent === 'Edit'));
@@ -781,9 +787,86 @@ test('profiles: edit yours in Settings, others open it by clicking your name, an
   assert.deepStrictEqual(pageErrors, []);
 });
 
-test('admin page loads clean and says it is off when no password is set', async () => {
+test('staff panel: signed out or non-staff people get the gate, not the tools', async () => {
   const a = await openClient('admin', { path: '/admin' });
-  await a.waitFor(() => a.visible(a.$('adm-off')), 'off notice');
-  assert.ok(!a.visible(a.$('adm-dash')));
+  await a.waitFor(() => a.visible(a.$('adm-gate')), 'gate shown');
+  assert.strictEqual(a.$('gate-title').textContent, 'Staff only');
+  assert.ok(!a.visible(a.$('adm-app')));
+  assert.deepStrictEqual(pageErrors, []);
+});
+
+/* ============================== v2.6: roles in the UI ============================== */
+
+async function staffAccount(name, rank) {
+  const res = await fetch(srv.base + '/api/auth/register', { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '10.77.0.' + (Math.floor(Math.random() * 200) + 1) }, body: JSON.stringify({ username: name, password: 'Zq8-' + Math.random().toString(36).slice(2, 10) + '-kx-42' }) });
+  assert.strictEqual(res.status, 201, await res.clone().text());
+  const cookie = res.headers.getSetCookie().find((c) => c.startsWith('token='));
+  require('../config/database').get('users').find({ usernameLower: name }).assign({ rank }).write();
+  return cookie;
+}
+
+test('moderators: badge on their messages, Remove on others\' #public messages, staff button; guests can report', async () => {
+  const cookie = await staffAccount('modmo', 'mod');
+  const m = await openClient('mod', { cookie });
+  const g = await openClient('repGuest');
+  await m.waitFor(() => m.visible(m.$('app')) && m.$('signal').dataset.state === 'up', 'mod in');
+  await g.guest();
+  await m.waitFor(() => m.visible(m.$('open-staff')), 'staff button for mods');
+  assert.ok(!g.visible(g.$('open-staff')), 'no staff button for guests');
+
+  await sleep(1100);
+  await m.say('hello from a mod');
+  await g.waitFor(() => rowFor(g, 'hello from a mod'), 'guest sees it');
+  assert.strictEqual(rowFor(g, 'hello from a mod').querySelector('.msg-rank').textContent, 'Mod', 'role badge');
+
+  // guest reports the mod's message
+  g.click(Array.from(rowFor(g, 'hello from a mod').querySelectorAll('.msg-act button')).find((x) => x.textContent === 'Report'));
+  await g.waitFor(() => g.$('dlg-report').classList.contains('is-open'), 'report dialog');
+  assert.ok(!g.visible(g.$('rp-share-row')), '#public needs no share box: it is already public');
+  g.$('rp-reason').value = 'spam';
+  g.$('rp-form').dispatchEvent(new g.window.Event('submit', { bubbles: true, cancelable: true }));
+  await g.waitFor(() => /moderators will take a look/.test(g.$('toasts').textContent), 'report sent');
+
+  // guest posts, mod removes it
+  await sleep(1100);
+  await g.say('buy cheap stuff here');
+  await m.waitFor(() => rowFor(m, 'buy cheap stuff here'), 'mod sees spam');
+  const acts = Array.from(rowFor(m, 'buy cheap stuff here').querySelectorAll('.msg-act button')).map((x) => x.textContent);
+  assert.deepStrictEqual(acts, ['Report', 'Remove']);
+  m.click(Array.from(rowFor(m, 'buy cheap stuff here').querySelectorAll('.msg-act button')).find((x) => x.textContent === 'Remove'));
+  await m.waitFor(() => m.$('dlg-confirm').classList.contains('is-open'), 'confirm');
+  m.click(m.$('cf-ok'));
+  await g.waitFor(() => !g.messages().includes('buy cheap stuff here'), 'gone for the guest');
+  await m.waitFor(() => !m.messages().includes('buy cheap stuff here'), 'gone for the mod');
+
+  // announcement banner shows up live
+  require('../src/bus').emit('staff:settings', { slowModeSec: 0, publicPosting: 'all', announcement: 'Welcome, be kind' });
+  await g.waitFor(() => g.visible(g.$('announce')) && g.$('announce-text').textContent === 'Welcome, be kind', 'banner');
+  require('../src/bus').emit('staff:settings', { slowModeSec: 0, publicPosting: 'staff', announcement: '' });
+  await g.waitFor(() => g.$('composer-input').disabled && /read-only/.test(g.$('composer-input').placeholder), 'read-only for the guest');
+  assert.ok(!m.$('composer-input').disabled, 'staff can still post');
+  require('../src/bus').emit('staff:settings', { slowModeSec: 0, publicPosting: 'all', announcement: '' });
+  await g.waitFor(() => !g.$('composer-input').disabled && !g.visible(g.$('announce')), 'back to normal');
+  assert.deepStrictEqual(pageErrors, []);
+});
+
+test('staff panel: an admin gets the tabs they are allowed; a moderator does not see admin-only tabs', async () => {
+  const adminCookie = await staffAccount('adminpanel', 'admin');
+  const a = await openClient('adminPanel', { path: '/admin', cookie: adminCookie });
+  await a.waitFor(() => a.visible(a.$('adm-app')), 'panel open');
+  const tabs = Array.from(a.document.querySelectorAll('.adm-tab')).filter((t) => a.visible(t)).map((t) => t.dataset.tab);
+  assert.deepStrictEqual(tabs, ['overview', 'reports', 'people', 'settings', 'audit']);
+  await a.waitFor(() => Number(a.$('s-accounts').textContent.replace(/,/g, '')) > 0, 'overview numbers');
+  a.click(a.document.querySelector('.adm-tab[data-tab="reports"]'));
+  await a.waitFor(() => a.document.querySelector('#rep-list .card'), 'the report from the earlier test');
+  assert.match(a.$('rep-list').textContent, /hello from a mod/);
+  a.click(a.document.querySelector('.adm-tab[data-tab="people"]'));
+  await a.waitFor(() => a.document.querySelectorAll('#ppl-rows tr').length > 1, 'people listed');
+
+  const modCookie = await staffAccount('modpanel', 'mod');
+  const m = await openClient('modPanel', { path: '/admin', cookie: modCookie });
+  await m.waitFor(() => m.visible(m.$('adm-app')), 'mod panel open');
+  const modTabs = Array.from(m.document.querySelectorAll('.adm-tab')).filter((t) => m.visible(t)).map((t) => t.dataset.tab);
+  assert.deepStrictEqual(modTabs, ['reports', 'people']);
   assert.deepStrictEqual(pageErrors, []);
 });

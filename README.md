@@ -16,7 +16,8 @@ Live at **https://zentencrypted.org**
 - **Pictures and files** - attach, paste a screenshot, or drag a file onto the chat. In private rooms and friend chats every file is encrypted in your browser with its own key before upload. #public allows pictures only. Photos are redrawn before upload, which strips hidden data like GPS location.
 - **Emojis and GIFs** - a built-in emoji picker (no outside requests). Optional GIF search through Giphy, proxied by your server so Giphy never sees your users' IPs.
 - **Profiles** - display name, status, pronouns, bio, colors, picture, banner and up to 6 links. Click anyone's name to see theirs. Every account gets a page at `/u/name`, visible to the whole internet only if its owner switches that on.
-- **Admin stats** - a password-protected dashboard at `/admin`: people online, messages per day, sign-ups, storage, and the machine's health (CPU temperature, memory, disk). Counts only, never content or names.
+- **Roles and moderation** - owner, admin, moderator, member and guest. Staff get role badges in chat, a Remove button on #public messages, moderator tools in profile popups, and a staff panel at `/admin` with stats, reports, people, #public settings (slow mode, accounts-only, read-only, announcement banner) and an audit log of every staff action.
+- **Reports** - anyone can report a message. Reports from encrypted chats only include the text if the reporter chooses to share their own copy, so staff still can't read private rooms or friend chats.
 - **Human check** - a small proof-of-work challenge (15-20 bits, escalating per account after repeated failures) instead of a third-party captcha.
 - **Themes** - Graphite (default), Signal, Paper, Ember, Glacier, Phosphor, Riso, Oled, plus a custom theme you can share with a code.
 - **Older device support** - CSS fallbacks for browsers without `dvh`, `gap` on flexbox, and modern `clamp()`.
@@ -92,7 +93,7 @@ Set these in `.env`:
 | `UPLOAD_KEEP_DAYS` | `30` | Files are deleted after this at the latest |
 | `GIPHY_API_KEY` | none | Turns on GIF search. Free key from [developers.giphy.com](https://developers.giphy.com) |
 | `GIF_RATING` | `pg-13` | `g`, `pg`, `pg-13` or `r` |
-| `ADMIN_PASSWORD` | none | Turns on the `/admin` page (12+ characters) |
+| `OWNER_USERNAME` | oldest account | Who the owner is (full control in the staff panel) |
 
 ## Deploying (Raspberry Pi + Cloudflare Tunnel)
 
@@ -119,6 +120,7 @@ Everything lives in `data/`:
 | `dm.jsonl` | Stored encrypted friend messages (ciphertext only) |
 | `files/` + `files.json` | Uploaded files (ciphertext for private chats) and their list |
 | `stats.json` | Daily counts for the admin page (numbers only) |
+| `moderation.json` | Reports, mutes, the audit log, #public settings, and blocked guest networks (stored as scrambled codes, never IP addresses) |
 
 Back these up if you care about them, and **never commit them**.
 
@@ -155,11 +157,11 @@ public/          Frontend (HTML, CSS, client-side crypto)
 - **v2.3** - security hardening
 - **v2.4** - offline friend messages with stored encrypted DMs
 - **v2.5** - edit and delete, file sharing, emojis and GIFs, profiles, admin stats
+- **v2.6** - new blue look and logo, rebuilt sign-in page, roles and moderation, reports, faster GIFs
 
 ## Roadmap
 
 - Two-factor sign-in
-- Moderation tools (report and ban)
 - Files over the peer-to-peer Link tab
 - Optional Tor hidden service
 

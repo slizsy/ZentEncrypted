@@ -15,7 +15,7 @@
     $('pp-card').hidden = true;
     $('pp-missing').hidden = false;
     if (text) $('pp-missing-text').textContent = text;
-    document.title = 'Not found · ZENT';
+    document.title = 'Not found · ZentEncrypted';
   }
 
   function render(p) {
@@ -71,8 +71,8 @@
       $('pp-links').append(a);
     }
     const m = /^(\d{4})-(\d{2})$/.exec(p.memberSince || '');
-    $('pp-since').textContent = m ? `On ZENT since ${MONTHS[Number(m[2]) - 1]} ${m[1]}` : '';
-    document.title = `${shown} (@${p.username}) · ZENT`;
+    $('pp-since').textContent = m ? `On ZentEncrypted since ${MONTHS[Number(m[2]) - 1]} ${m[1]}` : '';
+    document.title = `${shown} (@${p.username}) · ZentEncrypted`;
     card.classList.remove('is-loading');
   }
 

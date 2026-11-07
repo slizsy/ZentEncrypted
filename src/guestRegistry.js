@@ -72,4 +72,16 @@ function addFriend(id, friendId) {
   if (g) g.friends.add(friendId);
 }
 
-module.exports = { register, get, findByCode, addFriend, removeFriend, nameTaken, codeTaken, TTL_MS };
+/** ends a guest session right away (staff "kick"); their cookie stops working */
+function remove(id) {
+  return guests.delete(id);
+}
+
+/** guest id for a display name like Guest1234, if that guest is still around */
+function idForName(name) {
+  const lower = String(name).toLowerCase();
+  for (const [id, g] of guests) if (g.username.toLowerCase() === lower) return id;
+  return null;
+}
+
+module.exports = { register, get, findByCode, addFriend, removeFriend, nameTaken, codeTaken, remove, idForName, TTL_MS };
