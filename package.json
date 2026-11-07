@@ -1,6 +1,6 @@
 {
   "name": "zentencrypted",
-  "version": "2.6.1",
+  "version": "2.7.0",
   "description": "Self-hosted encrypted chat: public room, join-code rooms, friends, file sharing, profiles",
   "main": "server.js",
   "type": "commonjs",
